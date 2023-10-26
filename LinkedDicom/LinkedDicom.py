@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 from .util import read_list, save_list
 
 
+# TODO a lot of warning from pydicom to be check
+
 class ProcessFolder(ABC):
     def __init__(self, directory):
         self.directory = directory
@@ -35,6 +37,11 @@ class LinkedDicom:
             self.outer = outer
 
         def process_folder(self, persistent_storage):
+            """
+            Standard function to process the folder where dicom are stored
+            :param persistent_storage:
+            :return:
+            """
             for root, subdirs, files in os.walk(self.directory):
                 for filename in files:
                     file_path = os.path.join(root, filename)
@@ -42,6 +49,14 @@ class LinkedDicom:
                         self.outer.parseDcmFile(file_path, persistentStorage=persistent_storage)
 
         def process_folder_fr(self, persistent_storage, list_present, number_file):
+            """
+            Custom process folder for a specific project
+            :param persistent_storage:
+            :param list_present:
+            :param number_file:
+            :return:
+            """
+
             counter = 0
             list_file = []
             list_present_ = read_list(list_present)
@@ -60,16 +75,15 @@ class LinkedDicom:
                             if list_present_ is None or file_path not in list_present_:
 
                                 if file_path.endswith(".dcm") or file_path.endswith(".DCM"):
-
                                     self.outer.parseDcmFile(file_path, persistentStorage=persistent_storage)
                                     counter += 1
                                     list_file.append(file_path)
                         else:
-                            print("break")
                             br = True
                             break
                     if br:
                         break
+                # TODO this can be done better
                 except Exception as e:
                     print(f"Exception type: {type(e).__name__}")
                     print(f"Exception message: {str(e)}")
