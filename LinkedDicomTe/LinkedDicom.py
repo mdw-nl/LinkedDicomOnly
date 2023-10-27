@@ -8,7 +8,8 @@ from LinkedDicomTe.RDFService import GraphService
 from pydicom.tag import Tag
 from abc import ABC, abstractmethod
 from .util import read_list, save_list
-
+from pydicom import config
+config.convert_wrong_length_to_UN = True
 
 # TODO a lot of warning from pydicom to be check
 
