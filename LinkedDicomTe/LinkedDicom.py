@@ -2,9 +2,9 @@ import pydicom
 import os
 
 import requests
-from LinkedDicom.OntologyService import OntologyService
-from LinkedDicom.OntologyService import PropertyType
-from LinkedDicom.RDFService import GraphService
+from LinkedDicomTe.OntologyService import OntologyService
+from LinkedDicomTe.OntologyService import PropertyType
+from LinkedDicomTe.RDFService import GraphService
 from pydicom.tag import Tag
 from abc import ABC, abstractmethod
 from .util import read_list, save_list
@@ -65,18 +65,17 @@ class LinkedDicom:
                 list_file.extend(list_present_)
 
             for root, subdirs, files in os.walk(self.directory):
-                print(root)
                 try:
                     for filename in files:
-                        print(filename)
-                        if counter < number_file or number_file is None:
+                        if number_file is None or counter < number_file:
 
                             file_path = os.path.join(root, filename)
                             if list_present_ is None or file_path not in list_present_:
 
                                 if file_path.endswith(".dcm") or file_path.endswith(".DCM"):
                                     self.outer.parseDcmFile(file_path, persistentStorage=persistent_storage)
-                                    counter += 1
+                                    if number_file is not  None:
+                                        counter += 1
                                     list_file.append(file_path)
                         else:
                             br = True
@@ -102,19 +101,34 @@ class LinkedDicom:
         """
         self.process_f = self.ProcessFolderStandard(folder_location, self)
         self.process_f.process_folder_fr(persistent_storage, list_present, int_numb)
+        #self.process_f.process_folder(persistent_storage)
 
     def getTagValueForPredicate(self, dcmHeader, predicate):
+        """
+        :param dcmHeader:
+        :param predicate:
+        :return:
+        """
         tagString = predicate.replace(self.ontologyPrefix + "T", "")
         tag = Tag("0x" + tagString)
         return dcmHeader[tag].value
 
     def tagToString(self, tag):
+        """
+
+        :param tag:
+        :return:
+        """
         predicate = str(tag).replace("(", "")
         predicate = predicate.replace(", ", "")
         predicate = predicate.replace(")", "")
         return predicate
 
     def tagToPredicate(self, tag):
+        """
+        :param tag:
+        :return:
+        """
         predicate = self.tagToString(tag)
         predicate = predicate.upper()
         return [self.ontologyPrefix + "T" + predicate, self.ontologyPrefix + "R" + predicate]

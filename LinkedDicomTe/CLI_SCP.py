@@ -1,4 +1,4 @@
-from LinkedDicom import LinkedDicom
+from LinkedDicomTe import LinkedDicom
 import click
 import os
 import uuid

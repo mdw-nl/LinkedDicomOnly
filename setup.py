@@ -20,11 +20,11 @@ setup(
     ],
     entry_points = {
         'console_scripts': [
-            'ldcm-parse = LinkedDicom.cli:main_parse',
-            'ldcm-parse-test = LinkedDicom.cli:main_parse_test',
-            'ldcm-calc-dvh = LinkedDicom.cli:calc_dvh',
-            'ldcm-scp = LinkedDicom.CLI_SCP:start_scp',
-            'ldcm-upload = LinkedDicom.cli:upload_graph'
+            'ldcm-parse = LinkedDicomTe.cli:main_parse',
+            'ldcm-parse-test = LinkedDicomTe.cli:main_parse_test',
+            'ldcm-calc-dvh = LinkedDicomTe.cli:calc_dvh',
+            'ldcm-scp = LinkedDicomTe.CLI_SCP:start_scp',
+            'ldcm-upload = LinkedDicomTe.cli:upload_graph'
         ]
     },
     package_data = {

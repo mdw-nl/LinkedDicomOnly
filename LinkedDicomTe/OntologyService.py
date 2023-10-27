@@ -79,6 +79,11 @@ class OntologyService:
             return row["class"]
 
     def getObjectPredicatesForClassRange(self, classUri):
+        """
+
+        :param classUri:
+        :return:
+        """
         result = self.__ontology.query("""
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -100,6 +105,10 @@ class OntologyService:
         return result
     
     def getKeyForClass(self, classUri):
+        """
+        :param classUri:
+        :return:
+        """
         result = self.__ontology.query("""
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -118,6 +127,10 @@ class OntologyService:
             return row["tag"]
     
     def getClassForUID(self, uid):
+        """
+        :param uid:
+        :return:
+        """
         result = self.__ontology.query("""
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>

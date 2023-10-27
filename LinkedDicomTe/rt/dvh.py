@@ -1,4 +1,4 @@
-from LinkedDicom import RDFService
+from LinkedDicomTe import RDFService
 import datetime
 from abc import ABC, abstractmethod
 from dicompylercore import dicomparser, dvh, dvhcalc  # TODO do not load this module if dicompyler is not used
@@ -24,6 +24,10 @@ class DVH_factory(ABC):
 class DVH_dicompyler(DVH_factory):
 
     def __find_complete_packages(self):
+        """
+        Execute SPARQL query on the ttl file to get the RtDose, RtStruct and patientId
+        :return:
+        """
         query = """
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>

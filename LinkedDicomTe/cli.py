@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from LinkedDicom import LinkedDicom
-from LinkedDicom.rt import dvh
+from LinkedDicomTe import LinkedDicom
+from LinkedDicomTe.rt import dvh
 import os
 import click
 
