@@ -7,6 +7,86 @@ from uuid import uuid4
 import rdflib
 import json
 import os
+import numpy as np
+
+
+def get_dvh_v(structure,
+              dose,
+              roi,
+              rtplan,
+              limit=None,
+              calculate_full_volume=True,
+              use_structure_extents=False,
+              interpolation_resolution=None,
+              interpolation_segments_between_planes=0,
+              thickness=None,
+              memmap_rtdose=False,
+              callback=None):
+    """Calculate a cumulative DVH in Gy from a DICOM RT Structure Set & Dose.
+        Take as input the RTplan to calculate the Vx (v10,20 etc..)
+
+    Parameters
+    ----------
+    structure : pydicom Dataset or filename
+        DICOM RT Structure Set used to determine the structure data.
+    dose : pydicom Dataset or filename
+        DICOM RT Dose used to determine the dose grid.
+    roi : int
+        The ROI number used to uniquely identify the structure in the structure
+        set.
+    rtplan : pydicom Dataset or filename
+        DICOM RT plan path
+
+    limit : int, optional
+        Dose limit in cGy as a maximum bin for the histogram.
+    calculate_full_volume : bool, optional
+        Calculate the full structure volume including contours outside of the
+        dose grid.
+    use_structure_extents : bool, optional
+        Limit the DVH calculation to the in-plane structure boundaries.
+    interpolation_resolution : tuple or float, optional
+        Resolution in mm (row, col) to interpolate structure and dose data to.
+        If float is provided, original dose grid pixel spacing must be square.
+    interpolation_segments_between_planes : integer, optional
+        Number of segments to interpolate between structure slices.
+    thickness : float, optional
+        Structure thickness used to calculate volume of a voxel.
+    memmap_rtdose : bool, optional
+        Use memory mapping to access the pixel array of the DICOM RT Dose.
+        This reduces memory usage at the expense of increased calculation time.
+    callback : function, optional
+        A function that will be called at every iteration of the calculation.
+
+    Returns
+    -------
+    dvh.DVH
+        An instance of dvh.DVH in cumulative dose. This can be converted to
+        different formats using the attributes and properties of the DVH class.
+    """
+
+    rtss = dicomparser.DicomParser(structure)
+    rtdose = dicomparser.DicomParser(dose, memmap_pixel_array=memmap_rtdose)
+    structures = rtss.GetStructures()
+    s = structures[roi]
+    s['planes'] = rtss.GetStructureCoordinates(roi)
+    s['thickness'] = thickness if thickness else rtss.CalculatePlaneThickness(
+        s['planes'])
+    rt_plan = dicomparser.DicomParser(rtplan)
+
+    plan = rt_plan.GetPlan()
+
+    calcdvh = dicompylercore.dvhcalc._calculate_dvh(s, rtdose, limit, calculate_full_volume,
+                                                    use_structure_extents, interpolation_resolution,
+                                                    interpolation_segments_between_planes,
+                                                    callback)
+    return dvh.DVH(counts=calcdvh.histogram,
+                   bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
+                         np.arange(0, calcdvh.histogram.size + 1) / 100),
+                   dvh_type='differential',
+                   dose_units='Gy',
+                   notes=calcdvh.notes,
+                   name=s['name'],
+                   rx_dose=plan['rxdose'] / 100).cumulative
 
 
 class DVH_factory(ABC):
@@ -35,7 +115,7 @@ class DVH_dicompyler(DVH_factory):
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX schema: <https://schema.org/>
             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-            Select ?patientID ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
+            Select ?patientID ?rtPlanPath ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
             WHERE{
             {
                     SELECT (?patientID as ?pid) (Max((xsd:float(?fgn))) as ?maxFgn)
@@ -68,6 +148,7 @@ class DVH_dicompyler(DVH_factory):
                   ?data ldcm:T00100010 ?patientID.
                   ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
                   ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
+                  ?rtPlan schema:contentUrl ?rtPlanPath.
                   ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
 
                   ?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
@@ -105,8 +186,9 @@ class DVH_dicompyler(DVH_factory):
         dcmDosePackages = self.__find_complete_packages()
         for dosePackage in dcmDosePackages:
             print(
-                f"Processing  {dosePackage.patientID} | {dosePackage.rtDose} | {dosePackage.rtDosePath} | {dosePackage.rtStructPath} ")
-            calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath, )
+                f"Processing  {dosePackage.patientID} | {dosePackage.rtDosePath} | {dosePackage.rtStructPath} |"
+                f"{dosePackage.rtPlanPath} ")
+            calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath, dosePackage.rtPlanPath )
             uuid_for_calculation = uuid4()
             resultDict = {
                 "@context": {
@@ -199,68 +281,69 @@ class DVH_dicompyler(DVH_factory):
             with open(filename, "w") as f:
                 json.dump(resultDict, f)
 
-
-def __get_dvh_for_structures(self, rtStructPath, rtDosePath):
-    """
-        Calculate DVH parameters for all structures available in the RTSTRUCT file.
-        Input:
-            - rtStructPath: an URIRef or string containing the file path of the RTSTRUCT file
-            - rtDosePath: an URIRef or string containing the file path of the RTDOSE file
-        Output:
-            - A python list containing a dictionaries with the following items:
-                - structureName: name of the structure as given in the RTSTRUCT file
-                - min: minimum dose to the structure
-                - mean: mean dose for this structure
-                - max: maximum dose for this structure
-                - volume: volume of the structure
-                - color: color (Red Green Blue) for the structure on a scale of 0-255
-                - dvh_d: list of dose values on the DVH curve
-                - dvh_v: list of volume values on the DVH curve
+    def __get_dvh_for_structures(self, rtStructPath, rtDosePath, rtPlan):
         """
+            Calculate DVH parameters for all structures available in the RTSTRUCT file.
+            Input:
+                - rtStructPath: an URIRef or string containing the file path of the RTSTRUCT file
+                - rtDosePath: an URIRef or string containing the file path of the RTDOSE file
+                - rtPlan
+            Output:
+                - A python list containing a dictionaries with the following items:
+                    - structureName: name of the structure as given in the RTSTRUCT file
+                    - min: minimum dose to the structure
+                    - mean: mean dose for this structure
+                    - max: maximum dose for this structure
+                    - volume: volume of the structure
+                    - color: color (Red Green Blue) for the structure on a scale of 0-255
+                    - dvh_d: list of dose values on the DVH curve
+                    - dvh_v: list of volume values on the DVH curve
+            """
 
-    if type(rtStructPath) == rdflib.term.URIRef:
-        rtStructPath = str(rtStructPath).replace("file://", "")
-    structObj = dicomparser.DicomParser(rtStructPath)
+        if type(rtStructPath) == rdflib.term.URIRef:
+            rtStructPath = str(rtStructPath).replace("file://", "")
+        structObj = dicomparser.DicomParser(rtStructPath)
 
-    if type(rtDosePath) == rdflib.term.URIRef:
-        rtDosePath = str(rtDosePath).replace("file://", "")
-    # doseObj = dicomparser.DicomParser(rtDosePath)
+        if type(rtDosePath) == rdflib.term.URIRef:
+            rtDosePath = str(rtDosePath).replace("file://", "")
+        # doseObj = dicomparser.DicomParser(rtDosePath)
 
-    structures = structObj.GetStructures()
-    dvh_list = []
-    for index in structures:
-        structure = structures[index]
-        calcdvh = dvhcalc.get_dvh(rtStructPath, rtDosePath, index)
-        dvh_d = calcdvh.bincenters.tolist()
-        dvh_v = calcdvh.counts.tolist()
-        dvh_points = []
-        for i in range(0, len(dvh_d)):
-            dvh_points.append({
-                "d_point": dvh_d[i],
-                "v_point": dvh_v[i]
-            })
+        structures = structObj.GetStructures()
+        dvh_list = []
+        for index in structures:
+            structure = structures[index]
+            calcdvh = get_dvh_v(rtStructPath, rtDosePath, index,rtPlan)
+            dvh_d = calcdvh.bincenters.tolist()
 
-        id = "http://data.local/ldcm-rt/" + str(uuid4())
-        structOut = {
-            "@id": id,
-            "structureName": structure["name"],
-            "min": {"@id": f"{id}/min", "unit": "Gray", "value": calcdvh.min},
-            "mean": {"@id": f"{id}/mean", "unit": "Gray", "value": calcdvh.mean},
-            "max": {"@id": f"{id}/max", "unit": "Gray", "value": calcdvh.max},
-            "volume": {"@id": f"{id}/volume", "unit": "cc", "value": int(calcdvh.volume)},
-            "D10": {"@id": f"{id}/D10", "unit": "Gray", "value": float(calcdvh.D10.value)},
-            "D20": {"@id": f"{id}/D20", "unit": "Gray", "value": float(calcdvh.D20.value)},
-            "D30": {"@id": f"{id}/D30", "unit": "Gray", "value": float(calcdvh.D30.value)},
-            "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
-            "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
-            "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
-            "color": ','.join(str(e) for e in structure["color"].tolist()),
+            dvh_v = calcdvh.counts.tolist()
+            dvh_points = []
+            for i in range(0, len(dvh_d)):
+                dvh_points.append({
+                    "d_point": dvh_d[i],
+                    "v_point": dvh_v[i]
+                })
 
-            "dvh_curve": {
-                "@id": f"{id}/dvh_curve",
-                "dvh_points": dvh_points
+            id = "http://data.local/ldcm-rt/" + str(uuid4())
+            structOut = {
+                "@id": id,
+                "structureName": structure["name"],
+                "min": {"@id": f"{id}/min", "unit": "Gray", "value": calcdvh.min},
+                "mean": {"@id": f"{id}/mean", "unit": "Gray", "value": calcdvh.mean},
+                "max": {"@id": f"{id}/max", "unit": "Gray", "value": calcdvh.max},
+                "volume": {"@id": f"{id}/volume", "unit": "cc", "value": int(calcdvh.volume)},
+                "D10": {"@id": f"{id}/D10", "unit": "Gray", "value": float(calcdvh.D10.value)},
+                "D20": {"@id": f"{id}/D20", "unit": "Gray", "value": float(calcdvh.D20.value)},
+                "D30": {"@id": f"{id}/D30", "unit": "Gray", "value": float(calcdvh.D30.value)},
+                "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
+                "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
+                "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
+                "color": ','.join(str(e) for e in structure["color"].tolist()),
+
+                "dvh_curve": {
+                    "@id": f"{id}/dvh_curve",
+                    "dvh_points": dvh_points
+                }
             }
-        }
-        # dvh_dict[structure["name"]] = structOut
-        dvh_list.append(structOut)
-    return dvh_list
+            # dvh_dict[structure["name"]] = structOut
+            dvh_list.append(structOut)
+        return dvh_list
