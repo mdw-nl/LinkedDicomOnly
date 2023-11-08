@@ -177,6 +177,7 @@ class DVH_dicompyler(DVH_factory):
                   FILTER (xsd:float(?fgn) = ?maxFgn)
                   FILTER (?patientID = ?pid)
     }
+    limit 5
 
                 """
         dose_objects = self.get_ldcm_graph().runSparqlQuery(query)
