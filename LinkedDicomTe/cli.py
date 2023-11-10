@@ -84,7 +84,7 @@ def calc_dvh(output_location, ldcm_rdf_location=None, db_endpoint=None):
         dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
         dvh_factory.calculate_dvh(output_location)
     else:
-        raise Exception("Missing ttl file locaiton or graphdb address")
+        raise Exception("Missing ttl file location or graphdb address")
 
 
 @click.command()
@@ -97,3 +97,7 @@ def upload_graph(db_host, repo_db, file):
 
 if __name__ == "__main__":
     main_parse()
+# calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed", db_endpoint="http://localhost:7200/repositories/test_hypog")
+    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
+
+#

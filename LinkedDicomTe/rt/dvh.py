@@ -251,19 +251,8 @@ group by ?patientID
 FILTER (xsd:float(?fgn) = ?maxFgn)
 FILTER (?patientID = ?pid)
 }
-LIMIT 5
+
 """
-
-        esy = """select * WHERE { ?s ?p ?o } LIMIT 10
-        """
-        """sparql = SPARQLWrapper(upload_url)
-        sparql.setMethod('GET')  # This is optional, as GET is the default method
-        sparql.setQuery(sparql_query)
-        sparql.setReturnFormat(JSON)
-        sparql.addCustomHttpHeader("Accept", "application/sparql-results+json")
-        results = sparql.query().convert()
-        results = results["results"]["bindings"]"""
-
         results = graph.query(query, initNs={}, initBindings=None)
 
         return results
@@ -285,6 +274,7 @@ LIMIT 5
             logging.info("Starting Calculation...")
             calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
                                                            dosePackage.rtPlanPath)
+            logging.info("Calculation Complete ")
             uuid_for_calculation = uuid4()
             resultDict = {
                 "@context": {
@@ -419,6 +409,7 @@ LIMIT 5
         structures = structObj.GetStructures()
         dvh_list = []
         for index in structures:
+            logging.info("Calculating structures " + str(structures[index]))
             structure = structures[index]
             calcdvh = get_dvh_v(rtStructPath, rtDosePath, index, rtPlan)
             dvh_d = calcdvh.bincenters.tolist()
