@@ -7,7 +7,12 @@ import click
 
 from .util import upload_graph_db
 from uuid import uuid4
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 
 @click.command()
@@ -57,20 +62,29 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
     ldcm.process_folder_exe(dicom_input_folder, file_persistent, list_saved, number_file)
     uuid_for_calculation_str = str(uuid4())
     if output_location is None:
-        output_location = os.path.join(dicom_input_folder, uuid_for_calculation_str+"_linkeddicom.ttl")
+        output_location = os.path.join(dicom_input_folder, uuid_for_calculation_str + "_linkeddicom.ttl")
         ldcm.saveResults(output_location)
         print("Stored results in " + output_location)
     else:
-        ldcm.saveResults(output_location+uuid_for_calculation_str+"_linkeddicom.ttl")
+        ldcm.saveResults(output_location + uuid_for_calculation_str + "_linkeddicom.ttl")
         print("Stored results in " + output_location)
 
 
 @click.command()
-@click.argument('ldcm-rdf-location', type=click.Path(exists=True))
 @click.argument('output_location', type=click.Path(exists=False))
-def calc_dvh(ldcm_rdf_location, output_location):
-    dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
-    dvh_factory.calculate_dvh(output_location)
+@click.option('-fl', '--ldcm_rdf_location', default=None, type=click.Path(exists=True))
+@click.option('-ep', '--db_endpoint', default=None, type=str)
+def calc_dvh(output_location, ldcm_rdf_location=None, db_endpoint=None):
+    logging.info('Starting DVH Extraction')
+    if db_endpoint is not None and ldcm_rdf_location is None:
+        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
+        dvh_factory.calculate_dvh(output_location, db_endpoint)
+
+    elif db_endpoint is None and ldcm_rdf_location is not None:
+        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
+        dvh_factory.calculate_dvh(output_location)
+    else:
+        raise Exception("Missing ttl file locaiton or graphdb address")
 
 
 @click.command()
@@ -83,4 +97,3 @@ def upload_graph(db_host, repo_db, file):
 
 if __name__ == "__main__":
     main_parse()
-

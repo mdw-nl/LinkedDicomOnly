@@ -8,6 +8,9 @@ import rdflib
 import json
 import os
 import numpy as np
+import logging
+from rdflib.plugins.stores.sparqlstore import SPARQLStore
+from rdflib import Graph
 
 
 def get_dvh_v(structure,
@@ -91,7 +94,10 @@ def get_dvh_v(structure,
 
 class DVH_factory(ABC):
     def __init__(self, filePath):
-        self.__ldcm_graph = RDFService.GraphService(filePath)
+        if filePath is not None:
+            self.__ldcm_graph = RDFService.GraphService(filePath)
+        else:
+            self.__ldcm_graph = None
 
     def get_ldcm_graph(self):
         return self.__ldcm_graph
@@ -108,6 +114,7 @@ class DVH_dicompyler(DVH_factory):
         Execute SPARQL query on the ttl file to get the RtDose, RtStruct and patientId
         :return:
         """
+        logging.info("Execution Query...")
         query = """
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -176,20 +183,108 @@ class DVH_dicompyler(DVH_factory):
                   ?fgg ldcm:T300A0078 ?fgn.
                   FILTER (xsd:float(?fgn) = ?maxFgn)
                   FILTER (?patientID = ?pid)
-    }
-    limit 5
+            }
 
                 """
-        dose_objects = self.get_ldcm_graph().runSparqlQuery(query)
+        ldcm = self.get_ldcm_graph()
+        dose_objects = ldcm.runSparqlQuery(query)
         return dose_objects
 
-    def calculate_dvh(self, folder_to_store_results):
-        dcmDosePackages = self.__find_complete_packages()
+    def __find_complete_packages_gdb(self, upload_url):
+
+        store = SPARQLStore(upload_url)
+
+        # Create a graph with the SPARQLStore
+        graph = Graph(store=store)
+
+        # upload_url = f"{graphdb_url}/repositories/{repository_id}"
+
+        logging.info("Execution Query...")
+        query = """PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
+
+Select ?patientID ?rtPlanPath ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
+WHERE{
+{
+SELECT (?patientID as ?pid) (Max((xsd:float(?fgn))) as ?maxFgn)
+WHERE {
+?data ldcm:has_study ?dcmStudy.
+?data ldcm:T00100010 ?patientID.
+?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
+?dcmSerieRtPlan ldcm:has_image ?rtPlan.
+?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
+#?rtPlan ldcm:T00080018 ?uidRTPlan.
+?dcmStudy ldcm:has_series ?dcmSerieRtDose.
+?dcmSerieRtDose ldcm:has_image ?rtDose.
+?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
+?rtDose ldcm:T300C0002 ?refPlan.
+?refPlan ldcm:has_sequence_item ?uidrtDose.
+?uidrtDose ldcm:R00081155 ?rtPlan.
+?rtPlan ldcm:T300A0070 ?fg.
+?fg ldcm:has_sequence_item ?fgg.
+?fgg ldcm:T300A0078 ?fgn
+}
+group by ?patientID
+}
+?data ldcm:has_study ?dcmStudy.
+?data ldcm:T00100010 ?patientID.
+?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
+?dcmSerieRtPlan ldcm:has_image ?rtPlan.
+?rtPlan schema:contentUrl ?rtPlanPath.
+?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
+?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
+?dcmSerieRtStruct ldcm:has_image ?rtStruct.
+?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
+?rtPlan ldcm:T300C0060 ?refrtStr.
+?refrtStr ldcm:has_sequence_item ?refrtStr2.
+?refrtStr2 ldcm:R00081155 ?rtStruct.
+?dcmStudy ldcm:has_series ?dcmSerieRtDose.
+?dcmSerieRtDose ldcm:has_image ?rtDose.
+?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
+?rtDose ldcm:T300C0002 ?refPlan.
+?refPlan ldcm:has_sequence_item ?uidrtDose.
+?uidrtDose ldcm:R00081155 ?rtPlan.
+?rtDose schema:contentUrl ?rtDosePath.
+?rtStruct schema:contentUrl ?rtStructPath.
+?rtPlan ldcm:T300A0070 ?fg.
+?fg ldcm:has_sequence_item ?fgg.
+?fgg ldcm:T300A0078 ?fgn.
+FILTER (xsd:float(?fgn) = ?maxFgn)
+FILTER (?patientID = ?pid)
+}
+LIMIT 5
+"""
+
+        esy = """select * WHERE { ?s ?p ?o } LIMIT 10
+        """
+        """sparql = SPARQLWrapper(upload_url)
+        sparql.setMethod('GET')  # This is optional, as GET is the default method
+        sparql.setQuery(sparql_query)
+        sparql.setReturnFormat(JSON)
+        sparql.addCustomHttpHeader("Accept", "application/sparql-results+json")
+        results = sparql.query().convert()
+        results = results["results"]["bindings"]"""
+
+        results = graph.query(query, initNs={}, initBindings=None)
+
+        return results
+
+    def calculate_dvh(self, folder_to_store_results, db_add=None):
+        logging.info('Retrieving data from ttl file...')
+        if db_add is None:
+            dcmDosePackages = self.__find_complete_packages()
+        else:
+            dcmDosePackages = self.__find_complete_packages_gdb(db_add)
+
+        logging.info("Data retrieve completed.")
+        logging.info('Reading the data...')
+
         for dosePackage in dcmDosePackages:
-            print(
+            logging.info(
                 f"Processing  {dosePackage.patientID} | {dosePackage.rtDosePath} | {dosePackage.rtStructPath} |"
-                f"{dosePackage.rtPlanPath} ")
-            calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath, dosePackage.rtPlanPath )
+                f"{dosePackage.rtPlanPath} ...")
+            logging.info("Starting Calculation...")
+            calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
+                                                           dosePackage.rtPlanPath)
             uuid_for_calculation = uuid4()
             resultDict = {
                 "@context": {
@@ -248,6 +343,18 @@ class DVH_dicompyler(DVH_factory):
                     },
                     "D60": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/D60",
+                        "@type": "@id"
+                    },
+                    "V5": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V5",
+                        "@type": "@id"
+                    },
+                    "V10": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V10",
+                        "@type": "@id"
+                    },
+                    "V20": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V20",
                         "@type": "@id"
                     },
                     "dvh_points": {
@@ -313,7 +420,7 @@ class DVH_dicompyler(DVH_factory):
         dvh_list = []
         for index in structures:
             structure = structures[index]
-            calcdvh = get_dvh_v(rtStructPath, rtDosePath, index,rtPlan)
+            calcdvh = get_dvh_v(rtStructPath, rtDosePath, index, rtPlan)
             dvh_d = calcdvh.bincenters.tolist()
 
             dvh_v = calcdvh.counts.tolist()
@@ -338,6 +445,9 @@ class DVH_dicompyler(DVH_factory):
                 "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
                 "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
                 "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
+                "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": float(calcdvh.V5.value)},
+                "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": float(calcdvh.V10.value)},
+                "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": float(calcdvh.V20.value)},
                 "color": ','.join(str(e) for e in structure["color"].tolist()),
 
                 "dvh_curve": {

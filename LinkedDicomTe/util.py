@@ -43,6 +43,7 @@ def upload_graph_db(graphdb_url, repository_id, data_file, contenttype):
 
     with open(data_file, "r") as file:
         data = file.read()
+        data = data.encode('utf-8')
 
     # Set headers for the HTTP request
     headers = {
