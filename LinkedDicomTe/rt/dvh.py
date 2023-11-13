@@ -435,7 +435,8 @@ FILTER (?patientID = ?pid)
                 V20value = float(calcdvh.V20.value)
 
             except Exception as e:
-                logging.warning("Value not available exception =" + e)
+                logging.warning("Value not available exception =")
+                logging.error(e)
                 V5value = None
                 V10value = None
                 V20value = None
