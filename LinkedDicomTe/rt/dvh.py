@@ -412,7 +412,6 @@ FILTER (?patientID = ?pid)
 
         if type(rtDosePath) == rdflib.term.URIRef:
             rtDosePath = str(rtDosePath).replace("file://", "")
-        # doseObj = dicomparser.DicomParser(rtDosePath)
 
         structures = structObj.GetStructures()
         dvh_list = []
@@ -430,6 +429,18 @@ FILTER (?patientID = ?pid)
                     "v_point": dvh_v[i]
                 })
 
+            try:
+                V5value = float(calcdvh.V5.value)
+                V10value = float(calcdvh.V10.value)
+                V20value = float(calcdvh.V20.value)
+
+            except Exception as e:
+                logging.warning("Value not available exception =" + e)
+                V5value = None
+                V10value = None
+                V20value = None
+
+
             id = "http://data.local/ldcm-rt/" + str(uuid4())
             structOut = {
                 "@id": id,
@@ -444,9 +455,9 @@ FILTER (?patientID = ?pid)
                 "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
                 "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
                 "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
-                "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": float(calcdvh.V5.value)},
-                "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": float(calcdvh.V10.value)},
-                "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": float(calcdvh.V20.value)},
+                "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
+                "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
+                "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
                 "color": ','.join(str(e) for e in structure["color"].tolist()),
 
                 "dvh_curve": {
@@ -454,6 +465,5 @@ FILTER (?patientID = ?pid)
                     "dvh_points": dvh_points
                 }
             }
-            # dvh_dict[structure["name"]] = structOut
             dvh_list.append(structOut)
         return dvh_list
