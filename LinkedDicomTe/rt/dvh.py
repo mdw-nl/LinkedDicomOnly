@@ -82,14 +82,24 @@ def get_dvh_v(structure,
                                                     use_structure_extents, interpolation_resolution,
                                                     interpolation_segments_between_planes,
                                                     callback)
-    return dvh.DVH(counts=calcdvh.histogram,
-                   bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
-                         np.arange(0, calcdvh.histogram.size + 1) / 100),
-                   dvh_type='differential',
-                   dose_units='Gy',
-                   notes=calcdvh.notes,
-                   name=s['name'],
-                   rx_dose=plan['rxdose'] / 100).cumulative
+    if plan['rxdose'] is not None:
+
+        return dvh.DVH(counts=calcdvh.histogram,
+                       bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
+                             np.arange(0, calcdvh.histogram.size + 1) / 100),
+                       dvh_type='differential',
+                       dose_units='Gy',
+                       notes=calcdvh.notes,
+                       name=s['name'],
+                       rx_dose=plan['rxdose'] / 100).cumulative
+    else:
+        return dvh.DVH(counts=calcdvh.histogram,
+                       bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
+                             np.arange(0, calcdvh.histogram.size + 1) / 100),
+                       dvh_type='differential',
+                       dose_units='Gy',
+                       notes=calcdvh.notes,
+                       name=s['name']).cumulative
 
 
 class DVH_factory(ABC):
@@ -196,8 +206,6 @@ class DVH_dicompyler(DVH_factory):
 
         # Create a graph with the SPARQLStore
         graph = Graph(store=store)
-
-        # upload_url = f"{graphdb_url}/repositories/{repository_id}"
 
         logging.info("Execution Query...")
         query = """PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>

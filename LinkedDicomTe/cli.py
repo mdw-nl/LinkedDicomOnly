@@ -29,16 +29,16 @@ def main_parse(dicom_input_folder, ontology_file, file_persistent,
     """
     ldcm = LinkedDicom.LinkedDicom(ontology_file)
 
-    print(f"Start processing folder {dicom_input_folder}. Depending on the folder size this might take a while.")
+    logging.info(f"Start processing folder {dicom_input_folder}. Depending on the folder size this might take a while.")
 
     ldcm.process_folder_exe(dicom_input_folder, persistent_storage=file_persistent)
     if output_location is None:
         output_location = os.path.join(dicom_input_folder, "linkeddicom.ttl")
         ldcm.saveResults(output_location)
-        print("Stored results in " + output_location)
+        logging.info("Stored results in " + output_location)
     else:
         ldcm.saveResults(output_location)
-        print("Stored results in " + output_location)
+        logging.info("Stored results in " + output_location)
 
 
 @click.command()
@@ -57,17 +57,17 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
     """
     ldcm = LinkedDicom.LinkedDicom(ontology_file)
 
-    print(f"Start processing folder {dicom_input_folder}. Depending on the folder size this might take a while.")
+    logging.info(f"Start processing folder {dicom_input_folder}. Depending on the folder size this might take a while.")
 
     ldcm.process_folder_exe(dicom_input_folder, file_persistent, list_saved, number_file)
     uuid_for_calculation_str = str(uuid4())
     if output_location is None:
         output_location = os.path.join(dicom_input_folder, uuid_for_calculation_str + "_linkeddicom.ttl")
         ldcm.saveResults(output_location)
-        print("Stored results in " + output_location)
+        logging.info("Stored results in " + output_location)
     else:
         ldcm.saveResults(output_location + uuid_for_calculation_str + "_linkeddicom.ttl")
-        print("Stored results in " + output_location)
+        logging.info("Stored results in " + output_location)
 
 
 @click.command()
@@ -97,7 +97,7 @@ def upload_graph(db_host, repo_db, file):
 
 if __name__ == "__main__":
     main_parse()
-# calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed", db_endpoint="http://localhost:7200/repositories/test_hypog")
-    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
+    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed", db_endpoint="http://localhost:7200/repositories/test_hypog")
+    #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
 
 #
