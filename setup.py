@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='LinkedDicom',
-    version='0.3.0',
-    author='Johan van Soest',
-    author_email='j.vansoest@maastrichtuniversity.nl',
+    version='0.3.1',
+    author='Johan van Soest, Alessio Romita',
+    author_email='j.vansoest@maastrichtuniversity.nl ,alessio.romita@medicaldataworks.nl',
     packages=find_packages(),
     license='Apache 2.0',
     description='A package to extract DICOM header data and store this in RDF',
