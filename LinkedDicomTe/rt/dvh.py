@@ -10,7 +10,6 @@ import os
 import numpy as np
 import logging
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
-from rdflib import Graph
 
 
 def get_dvh_v(structure,
@@ -103,13 +102,21 @@ def get_dvh_v(structure,
 
 
 class DVH_factory(ABC):
-    def __init__(self, filePath):
-        if filePath is not None:
-            self.__ldcm_graph = RDFService.GraphService(filePath)
+    def __init__(self, file_path, urls=None):
+        """
+        :param file_path:
+        :param urls:
+        """
+        if file_path is not None:
+            self.__ldcm_graph = RDFService.GraphService(file_path)
         else:
-            self.__ldcm_graph = None
+            store = SPARQLStore(urls)
+            self.__ldcm_graph = RDFService.GraphService(file_path, store)
 
     def get_ldcm_graph(self):
+        """
+        :return:
+        """
         return self.__ldcm_graph
 
     @abstractmethod
@@ -121,17 +128,15 @@ class DVH_dicompyler(DVH_factory):
 
     def __find_complete_packages(self):
         """
+        :return:
+        """
+        """
         Execute SPARQL query on the ttl file to get the RtDose, RtStruct and patientId
         :return:
         """
         logging.info("Execution Query...")
         query = """
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-            PREFIX owl: <http://www.w3.org/2002/07/owl#>
-            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX schema: <https://schema.org/>
-            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
             Select ?patientID ?rtPlanPath ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
             WHERE{
             {
@@ -200,77 +205,17 @@ class DVH_dicompyler(DVH_factory):
         dose_objects = ldcm.runSparqlQuery(query)
         return dose_objects
 
-    def __find_complete_packages_gdb(self, upload_url):
+    def calculate_dvh(self, folder_to_store_results):
+        """
 
-        store = SPARQLStore(upload_url)
-
-        # Create a graph with the SPARQLStore
-        graph = Graph(store=store)
-
-        logging.info("Execution Query...")
-        query = """PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
-
-Select ?patientID ?rtPlanPath ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
-WHERE{
-{
-SELECT (?patientID as ?pid) (Max((xsd:float(?fgn))) as ?maxFgn)
-WHERE {
-?data ldcm:has_study ?dcmStudy.
-?data ldcm:T00100010 ?patientID.
-?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
-?dcmSerieRtPlan ldcm:has_image ?rtPlan.
-?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
-#?rtPlan ldcm:T00080018 ?uidRTPlan.
-?dcmStudy ldcm:has_series ?dcmSerieRtDose.
-?dcmSerieRtDose ldcm:has_image ?rtDose.
-?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
-?rtDose ldcm:T300C0002 ?refPlan.
-?refPlan ldcm:has_sequence_item ?uidrtDose.
-?uidrtDose ldcm:R00081155 ?rtPlan.
-?rtPlan ldcm:T300A0070 ?fg.
-?fg ldcm:has_sequence_item ?fgg.
-?fgg ldcm:T300A0078 ?fgn
-}
-group by ?patientID
-}
-?data ldcm:has_study ?dcmStudy.
-?data ldcm:T00100010 ?patientID.
-?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
-?dcmSerieRtPlan ldcm:has_image ?rtPlan.
-?rtPlan schema:contentUrl ?rtPlanPath.
-?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
-?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
-?dcmSerieRtStruct ldcm:has_image ?rtStruct.
-?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
-?rtPlan ldcm:T300C0060 ?refrtStr.
-?refrtStr ldcm:has_sequence_item ?refrtStr2.
-?refrtStr2 ldcm:R00081155 ?rtStruct.
-?dcmStudy ldcm:has_series ?dcmSerieRtDose.
-?dcmSerieRtDose ldcm:has_image ?rtDose.
-?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
-?rtDose ldcm:T300C0002 ?refPlan.
-?refPlan ldcm:has_sequence_item ?uidrtDose.
-?uidrtDose ldcm:R00081155 ?rtPlan.
-?rtDose schema:contentUrl ?rtDosePath.
-?rtStruct schema:contentUrl ?rtStructPath.
-?rtPlan ldcm:T300A0070 ?fg.
-?fg ldcm:has_sequence_item ?fgg.
-?fgg ldcm:T300A0078 ?fgn.
-FILTER (xsd:float(?fgn) = ?maxFgn)
-FILTER (?patientID = ?pid)
-}
-
-"""
-        results = graph.query(query, initNs={}, initBindings=None)
-
-        return results
-
-    def calculate_dvh(self, folder_to_store_results, db_add=None):
+        :param folder_to_store_results:
+        :return:
+        """
         logging.info('Retrieving data from ttl file...')
-        if db_add is None:
-            dcmDosePackages = self.__find_complete_packages()
-        else:
-            dcmDosePackages = self.__find_complete_packages_gdb(db_add)
+        # if db_add is None:
+        dcmDosePackages = self.__find_complete_packages()
+        # else:
+        #     dcmDosePackages = self.__find_complete_packages_gdb(db_add)
 
         logging.info("Data retrieve completed.")
         logging.info('Reading the data...')
@@ -441,30 +386,33 @@ FILTER (?patientID = ?pid)
                 V10value = None
                 V20value = None
 
-
             id = "http://data.local/ldcm-rt/" + str(uuid4())
-            structOut = {
-                "@id": id,
-                "structureName": structure["name"],
-                "min": {"@id": f"{id}/min", "unit": "Gray", "value": calcdvh.min},
-                "mean": {"@id": f"{id}/mean", "unit": "Gray", "value": calcdvh.mean},
-                "max": {"@id": f"{id}/max", "unit": "Gray", "value": calcdvh.max},
-                "volume": {"@id": f"{id}/volume", "unit": "cc", "value": int(calcdvh.volume)},
-                "D10": {"@id": f"{id}/D10", "unit": "Gray", "value": float(calcdvh.D10.value)},
-                "D20": {"@id": f"{id}/D20", "unit": "Gray", "value": float(calcdvh.D20.value)},
-                "D30": {"@id": f"{id}/D30", "unit": "Gray", "value": float(calcdvh.D30.value)},
-                "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
-                "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
-                "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
-                "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
-                "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
-                "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
-                "color": ','.join(str(e) for e in structure["color"].tolist()),
+            try:
+                structOut = {
+                    "@id": id,
+                    "structureName": structure["name"],
+                    "min": {"@id": f"{id}/min", "unit": "Gray", "value": calcdvh.min},
+                    "mean": {"@id": f"{id}/mean", "unit": "Gray", "value": calcdvh.mean},
+                    "max": {"@id": f"{id}/max", "unit": "Gray", "value": calcdvh.max},
+                    "volume": {"@id": f"{id}/volume", "unit": "cc", "value": int(calcdvh.volume)},
+                    "D10": {"@id": f"{id}/D10", "unit": "Gray", "value": float(calcdvh.D10.value)},
+                    "D20": {"@id": f"{id}/D20", "unit": "Gray", "value": float(calcdvh.D20.value)},
+                    "D30": {"@id": f"{id}/D30", "unit": "Gray", "value": float(calcdvh.D30.value)},
+                    "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
+                    "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
+                    "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
+                    "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
+                    "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
+                    "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
+                    "color": ','.join(str(e) for e in structure.get("patata", np.array([])).tolist()),
 
-                "dvh_curve": {
-                    "@id": f"{id}/dvh_curve",
-                    "dvh_points": dvh_points
+                    "dvh_curve": {
+                        "@id": f"{id}/dvh_curve",
+                        "dvh_points": dvh_points
+                    }
                 }
-            }
+            except Exception as e:
+                logging.warning(e)
+                continue
             dvh_list.append(structOut)
         return dvh_list

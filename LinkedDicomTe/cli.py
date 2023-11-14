@@ -5,7 +5,7 @@ from LinkedDicomTe.rt import dvh
 import os
 import click
 
-from .util import upload_graph_db
+from util import upload_graph_db
 from uuid import uuid4
 import logging
 
@@ -77,8 +77,8 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
 def calc_dvh(output_location, ldcm_rdf_location=None, db_endpoint=None):
     logging.info('Starting DVH Extraction')
     if db_endpoint is not None and ldcm_rdf_location is None:
-        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
-        dvh_factory.calculate_dvh(output_location, db_endpoint)
+        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location, urls=db_endpoint)
+        dvh_factory.calculate_dvh(output_location)
 
     elif db_endpoint is None and ldcm_rdf_location is not None:
         dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
@@ -97,7 +97,8 @@ def upload_graph(db_host, repo_db, file):
 
 if __name__ == "__main__":
     main_parse()
-    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed", db_endpoint="http://localhost:7200/repositories/test_hypog")
+    #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",
+    #        db_endpoint="http://localhost:7200/repositories/test_hypog")
     #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
 
 #
