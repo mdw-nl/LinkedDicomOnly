@@ -5,7 +5,7 @@ from LinkedDicomTe.rt import dvh
 import os
 import click
 
-from util import upload_graph_db
+from .util import upload_graph_db
 from uuid import uuid4
 import logging
 
