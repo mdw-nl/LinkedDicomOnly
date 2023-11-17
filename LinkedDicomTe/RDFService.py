@@ -14,7 +14,7 @@ class GraphService:
             self.__graph.bind('schema', 'https://schema.org/')
             self.__graph.bind('file', 'file:/')
             self.__graph.parse(filePath, format=rdflib.util.guess_format(filePath), encoding="utf-8")
-        else:
+        elif store is not None:
             self.__graph = rdflib.Graph(store=store)
 
     def replaceUriToShort(self, uriString):
