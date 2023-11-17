@@ -16,6 +16,13 @@ class GraphService:
             self.__graph.parse(filePath, format=rdflib.util.guess_format(filePath), encoding="utf-8")
         elif store is not None:
             self.__graph = rdflib.Graph(store=store)
+        else:
+            self.__graph = rdflib.Graph()
+            self.__graph.bind('ldcm', 'https://johanvansoest.nl/ontologies/LinkedDicom/')
+            self.__graph.bind('data', 'http://data.local/rdf/linkeddicom/')
+            self.__graph.bind('rdfs', 'http://www.w3.org/2000/01/rdf-schema#')
+            self.__graph.bind('schema', 'https://schema.org/')
+            self.__graph.bind('file', 'file:/')
 
     def replaceUriToShort(self, uriString):
         for ns in self.__graph.namespaces():
