@@ -98,7 +98,7 @@ def upload_graph(db_host, repo_db, file):
 if __name__ == "__main__":
     main_parse()
     #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",
-    #        db_endpoint="http://localhost:7200/repositories/test_hypog")
+     #       db_endpoint="http://localhost:7200/repositories/req")
     #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
 
 #

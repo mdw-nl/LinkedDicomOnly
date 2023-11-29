@@ -137,69 +137,34 @@ class DVH_dicompyler(DVH_factory):
         logging.info("Execution Query...")
         query = """
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
-            Select ?patientID ?rtPlanPath ?rtDose ?rtDosePath ?rtStruct ?rtStructPath 
-            WHERE{
-            {
-                    SELECT (?patientID as ?pid) (Max((xsd:float(?fgn))) as ?maxFgn)
-            WHERE {
-                  ?data ldcm:has_study ?dcmStudy.
-                  ?data ldcm:T00100010 ?patientID.
-                  ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
-                  ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
-                  ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
-                  #?rtPlan ldcm:T00080018 ?uidRTPlan.
-
-                  ?dcmStudy ldcm:has_series ?dcmSerieRtDose.
-                  ?dcmSerieRtDose ldcm:has_image ?rtDose.
-                  ?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
-                  ?rtDose ldcm:T300C0002 ?refPlan.
-                  ?refPlan ldcm:has_sequence_item ?uidrtDose.
-                  ?uidrtDose ldcm:R00081155 ?rtPlan.
-
-                  ?rtPlan ldcm:T300A0070 ?fg.
-                  ?fg ldcm:has_sequence_item ?fgg.
-                  ?fgg ldcm:T300A0078 ?fgn.
-                  #FILTER (?patientID = "RQ14126-9").
-
-
-
-              }
-            group by ?patientID
-            }
-                ?data ldcm:has_study ?dcmStudy.
-                  ?data ldcm:T00100010 ?patientID.
-                  ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
-                  ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
-                  ?rtPlan schema:contentUrl ?rtPlanPath.
-                  ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
-
-                  ?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
-                  ?dcmSerieRtStruct ldcm:has_image ?rtStruct.
-                  ?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
-
-
-                  ?rtPlan ldcm:T300C0060 ?refrtStr.
-                  ?refrtStr ldcm:has_sequence_item ?refrtStr2.
-                  ?refrtStr2 ldcm:R00081155 ?rtStruct.
-
-                  ?dcmStudy ldcm:has_series ?dcmSerieRtDose.
-                  ?dcmSerieRtDose ldcm:has_image ?rtDose.
-                  ?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
-                  ?rtDose ldcm:T300C0002 ?refPlan.
-                  ?refPlan ldcm:has_sequence_item ?uidrtDose.
-                  ?uidrtDose ldcm:R00081155 ?rtPlan.
-                  ?rtDose schema:contentUrl ?rtDosePath.
-
-                  ?rtStruct schema:contentUrl ?rtStructPath.
-
-
-                  ?rtPlan ldcm:T300A0070 ?fg.
-                  ?fg ldcm:has_sequence_item ?fgg.
-                  ?fgg ldcm:T300A0078 ?fgn.
-                  FILTER (xsd:float(?fgn) = ?maxFgn)
-                  FILTER (?patientID = ?pid)
-            }
-
+SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanPath ?fgn
+                WHERE {
+    				?data ldcm:has_study ?dcmStudy.
+    				?data ldcm:T00100010 ?patientID.
+                    ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
+                    
+                    ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
+    				?rtPlan schema:contentUrl ?rtPlanPath.
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
+                    
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
+                    ?dcmSerieRtStruct ldcm:has_image ?rtStruct.
+                    ?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
+                    ?rtStruct schema:contentUrl ?rtStructPath.
+                    
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtDose.
+                    ?dcmSerieRtDose ldcm:has_image ?rtDose.
+                    ?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
+                    ?rtDose schema:contentUrl ?rtDosePath.
+    				?rtPlan ldcm:T300A0070 ?fg.
+					?fg ldcm:has_sequence_item ?fgg.
+					?fgg ldcm:T300A0078 ?fgn.
+					
+    
+    
+                }
+                
+                
                 """
         ldcm = self.get_ldcm_graph()
         dose_objects = ldcm.runSparqlQuery(query)
@@ -223,7 +188,7 @@ class DVH_dicompyler(DVH_factory):
         for dosePackage in dcmDosePackages:
             logging.info(
                 f"Processing  {dosePackage.patientID} | {dosePackage.rtDosePath} | {dosePackage.rtStructPath} |"
-                f"{dosePackage.rtPlanPath} ...")
+                f"{dosePackage.rtPlanPath} | {dosePackage.fgn}...")
             logging.info("Starting Calculation...")
             calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
                                                            dosePackage.rtPlanPath)
@@ -233,6 +198,7 @@ class DVH_dicompyler(DVH_factory):
                 "@context": {
                     "CalculationResult": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/CalculationResult",
                     "PatientID": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/PatientIdentifier",
+                    "doseFraction":"https://johanvansoest.nl/ontologies/LinkedDicom-dvh/DoseFractionNumbers",
                     "references": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/references",
                         "@type": "@id"
@@ -319,6 +285,7 @@ class DVH_dicompyler(DVH_factory):
                 "@type": "CalculationResult",
                 "@id": "http://data.local/ldcm-rt/" + str(uuid_for_calculation),
                 "PatientID": dosePackage.patientID,
+                "doseFraction": dosePackage.fgn,
                 "references": [dosePackage.rtDose, dosePackage.rtStruct],
                 "software": {
                     "@id": "https://github.com/dicompyler/dicompyler-core",
@@ -404,7 +371,7 @@ class DVH_dicompyler(DVH_factory):
                     "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
                     "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
                     "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
-                    "color": ','.join(str(e) for e in structure.get("patata", np.array([])).tolist()),
+                    "color": ','.join(str(e) for e in structure.get("color", np.array([])).tolist()),
 
                     "dvh_curve": {
                         "@id": f"{id}/dvh_curve",
