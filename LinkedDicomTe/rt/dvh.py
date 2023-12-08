@@ -190,8 +190,11 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                 f"Processing  {dosePackage.patientID} | {dosePackage.rtDosePath} | {dosePackage.rtStructPath} |"
                 f"{dosePackage.rtPlanPath} | {dosePackage.fgn}...")
             logging.info("Starting Calculation...")
-            calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
-                                                           dosePackage.rtPlanPath)
+            try:
+                calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
+                                                               dosePackage.rtPlanPath)
+            except:
+                continue
             logging.info("Calculation Complete ")
             uuid_for_calculation = uuid4()
             resultDict = {
