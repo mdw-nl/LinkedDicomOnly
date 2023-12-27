@@ -77,6 +77,8 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
 @click.option('-ep', '--db_endpoint', default=None, type=str)
 def calc_dvh(output_location, ldcm_rdf_location=None, db_endpoint=None):
     logging.info('Starting DVH Extraction')
+    logging.info(str(ldcm_rdf_location))
+    logging.info(str(output_location))
     if db_endpoint is not None and ldcm_rdf_location is None:
         dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location, urls=db_endpoint)
         dvh_factory.calculate_dvh(output_location)
