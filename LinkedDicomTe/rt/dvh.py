@@ -66,8 +66,7 @@ def get_dvh_v(structure,
         different formats using the attributes and properties of the DVH class.
     """
 
-
-    #rtplan = rtplan.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+    rtplan = rtplan.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
     rtss = dicomparser.DicomParser(structure)
     rtdose = dicomparser.DicomParser(dose, memmap_pixel_array=memmap_rtdose)
     structures = rtss.GetStructures()
@@ -161,11 +160,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
     				?rtPlan ldcm:T300A0070 ?fg.
 					?fg ldcm:has_sequence_item ?fgg.
 					?fgg ldcm:T300A0078 ?fgn.
-					
-                   
-					
-    
-    
+					FILTER (?patientID = "RQ22074-9")
                 }
                 
                 
@@ -197,15 +192,16 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
             try:
                 calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
                                                                dosePackage.rtPlanPath)
-            except Exception as  ex:
-               continue
+            except Exception as ex:
+                logging.info("Error skipping")
+                continue
             logging.info("Calculation Complete ")
             uuid_for_calculation = uuid4()
             resultDict = {
                 "@context": {
                     "CalculationResult": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/CalculationResult",
                     "PatientID": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/PatientIdentifier",
-                    "doseFraction":"https://johanvansoest.nl/ontologies/LinkedDicom-dvh/DoseFractionNumbers",
+                    "doseFraction": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/DoseFractionNumbers",
                     "references": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/references",
                         "@type": "@id"
@@ -327,13 +323,12 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
 
         if type(rtStructPath) == rdflib.term.URIRef:
             rtStructPath = str(rtStructPath).replace("file://", "")
-        #rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+        rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
         structObj = dicomparser.DicomParser(rtStructPath)
 
         if type(rtDosePath) == rdflib.term.URIRef:
             rtDosePath = str(rtDosePath).replace("file://", "")
-        #rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
-
+        rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
 
         structures = structObj.GetStructures()
         dvh_list = []
@@ -342,7 +337,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
             structure = structures[index]
             try:
                 calcdvh = get_dvh_v(rtStructPath, rtDosePath, index, rtPlan)
-            except:
+            except Exception as exeppp:
                 logging.warning("Skipping...")
                 continue
             dvh_d = calcdvh.bincenters.tolist()

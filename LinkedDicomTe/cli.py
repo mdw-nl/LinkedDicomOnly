@@ -5,7 +5,7 @@ from LinkedDicomTe.rt import dvh
 import os
 import click
 
-from .util import upload_graph_db
+from util import upload_graph_db
 from uuid import uuid4
 import logging
 
@@ -70,6 +70,7 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
         logging.info("Stored results in " + output_location)
 
 
+
 @click.command()
 @click.argument('output_location', type=click.Path(exists=False))
 @click.option('-fl', '--ldcm_rdf_location', default=None, type=click.Path(exists=True))
@@ -98,7 +99,7 @@ def upload_graph(db_host, repo_db, file):
 if __name__ == "__main__":
     main_parse()
     #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",
-     #       db_endpoint="http://localhost:7200/repositories/req")
-    #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
+    #         db_endpoint="http://localhost:7200/repositories/req")
+    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
 
 #
