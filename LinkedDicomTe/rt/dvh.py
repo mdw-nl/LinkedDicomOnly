@@ -299,8 +299,11 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
             }
 
             filename = os.path.join(folder_to_store_results, f"{uuid_for_calculation}.jsonld")
+            logging.info("Saving in" + str(filename))
             with open(filename, "w") as f:
                 json.dump(resultDict, f)
+                logging.info("Saving done")
+
 
     def __get_dvh_for_structures(self, rtStructPath, rtDosePath, rtPlan):
         """
