@@ -160,7 +160,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
     				?rtPlan ldcm:T300A0070 ?fg.
 					?fg ldcm:has_sequence_item ?fgg.
 					?fgg ldcm:T300A0078 ?fgn.
-					FILTER (?patientID = "RQ22074-9")
+					
                 }
                 
                 

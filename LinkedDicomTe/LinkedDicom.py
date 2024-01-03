@@ -1,3 +1,5 @@
+import logging
+
 import pydicom
 import os
 
@@ -75,7 +77,7 @@ class LinkedDicom:
 
                                 if file_path.endswith(".dcm") or file_path.endswith(".DCM"):
                                     self.outer.parseDcmFile(file_path, persistentStorage=persistent_storage)
-                                    if number_file is not  None:
+                                    if number_file is not None:
                                         counter += 1
                                     list_file.append(file_path)
                         else:
@@ -85,8 +87,8 @@ class LinkedDicom:
                         break
                 # TODO this can be done better
                 except Exception as e:
-                    print(f"Exception type: {type(e).__name__}")
-                    print(f"Exception message: {str(e)}")
+                    logging.warning(f"Exception type: {type(e).__name__}")
+                    logging.warning(f"Exception message: {str(e)}")
             save_list(list_file, list_present)
 
     def process_folder_exe(self, folder_location, persistent_storage=False,

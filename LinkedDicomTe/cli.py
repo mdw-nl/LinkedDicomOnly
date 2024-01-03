@@ -61,6 +61,7 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
 
     ldcm.process_folder_exe(dicom_input_folder, file_persistent, list_saved, number_file)
     uuid_for_calculation_str = str(uuid4())
+    logging.info(f"Calculation completed saving file....")
     if output_location is None:
         output_location = os.path.join(dicom_input_folder, uuid_for_calculation_str + "_linkeddicom.ttl")
         ldcm.saveResults(output_location)
@@ -100,8 +101,5 @@ def upload_graph(db_host, repo_db, file):
 
 if __name__ == "__main__":
     main_parse()
-    #calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",
-    #         db_endpoint="http://localhost:7200/repositories/req")
-    # calc_dvh("/Users/alessioromita/PycharmProjects/LinkedDicomMdw/DataListProcessed",ldcm_rdf_location="/Users/alessioromita/Documents/ImageRequiteSample/linkeddicom.ttl")
 
-#
+
