@@ -10,7 +10,9 @@ def save_list(my_list, path):
 
 
 def read_list(path):
-    if not check_if_exist(path):
+    if path is None:
+        return None
+    elif not check_if_exist(path):
         return None
     else:
         with open(path, "r") as file:

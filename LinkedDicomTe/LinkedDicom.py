@@ -11,7 +11,9 @@ from pydicom.tag import Tag
 from abc import ABC, abstractmethod
 from .util import read_list, save_list
 from pydicom import config
+
 config.convert_wrong_length_to_UN = True
+
 
 # TODO a lot of warning from pydicom to be check
 
@@ -66,6 +68,9 @@ class LinkedDicom:
             br = False
             if list_present_ is not None:
                 list_file.extend(list_present_)
+                logging.info("Older list of file executed available")
+            else:
+                logging.info("List present is None no previous file has been included")
 
             for root, subdirs, files in os.walk(self.directory):
                 try:
@@ -89,7 +94,8 @@ class LinkedDicom:
                 except Exception as e:
                     logging.warning(f"Exception type: {type(e).__name__}")
                     logging.warning(f"Exception message: {str(e)}")
-            save_list(list_file, list_present)
+            if list_present_ is not None:
+                save_list(list_file, list_present)
 
     def process_folder_exe(self, folder_location, persistent_storage=False,
                            list_present=None, int_numb=None):
@@ -104,7 +110,7 @@ class LinkedDicom:
         """
         self.process_f = self.ProcessFolderStandard(folder_location, self)
         self.process_f.process_folder_fr(persistent_storage, list_present, int_numb)
-        #self.process_f.process_folder(persistent_storage)
+        # self.process_f.process_folder(persistent_storage)
 
     def getTagValueForPredicate(self, dcmHeader, predicate):
         """
