@@ -193,6 +193,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                 calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
                                                                dosePackage.rtPlanPath)
             except Exception as ex:
+                print(ex)
                 logging.warning(ex)
                 logging.info("Error skipping")
                 continue
@@ -392,6 +393,8 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                     }
                 }
             except Exception as e:
+                print(e)
+                logging("error")
                 logging.warning(e)
                 continue
             dvh_list.append(structOut)
