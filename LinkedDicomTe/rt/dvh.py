@@ -66,7 +66,7 @@ def get_dvh_v(structure,
         different formats using the attributes and properties of the DVH class.
     """
 
-    rtplan = rtplan.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+    #rtplan = rtplan.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
     rtss = dicomparser.DicomParser(structure)
     rtdose = dicomparser.DicomParser(dose, memmap_pixel_array=memmap_rtdose)
     structures = rtss.GetStructures()
@@ -328,12 +328,12 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
 
         if type(rtStructPath) == rdflib.term.URIRef:
             rtStructPath = str(rtStructPath).replace("file://", "")
-        rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+        #rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
         structObj = dicomparser.DicomParser(rtStructPath)
 
         if type(rtDosePath) == rdflib.term.URIRef:
             rtDosePath = str(rtDosePath).replace("file://", "")
-        rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+        #rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
 
         structures = structObj.GetStructures()
         dvh_list = []
