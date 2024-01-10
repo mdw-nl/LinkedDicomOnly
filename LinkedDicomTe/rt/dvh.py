@@ -193,6 +193,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                 calculatedDose = self.__get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
                                                                dosePackage.rtPlanPath)
             except Exception as ex:
+                logging.warning(ex)
                 logging.info("Error skipping")
                 continue
             logging.info("Calculation Complete ")
@@ -273,7 +274,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_point",
                         "@type": "@id"
                     },
-                    "dvh_curve": {
+                    "4": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_curve",
                         "@type": "@id"
                     },

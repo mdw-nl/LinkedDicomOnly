@@ -4,12 +4,22 @@ import requests
 
 
 def save_list(my_list, path):
+    """
+    :param my_list:
+    :param path:
+    :return:
+    """
     with open(path, "w") as file:
         for item in my_list:
             file.write("%s\n" % item)
 
 
 def read_list(path):
+    """
+
+    :param path:
+    :return:
+    """
     if path is None:
         return None
     elif not check_if_exist(path):
@@ -24,6 +34,11 @@ def read_list(path):
 
 
 def check_if_exist(path):
+    """
+
+    :param path:
+    :return:
+    """
     return os.path.exists(path)
 
 
