@@ -394,7 +394,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                 }
             except Exception as e:
                 print(e)
-                logging("error")
+                logging.info("error")
                 logging.warning(e)
                 continue
             dvh_list.append(structOut)
