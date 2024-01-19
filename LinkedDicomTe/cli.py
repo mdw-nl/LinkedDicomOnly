@@ -100,13 +100,12 @@ def upload_graph(db_host, repo_db, file):
 
 
 @click.command()
-@click.argument('PathFile', type=click.Path(exists=False))
+@click.argument('path_file', type=click.Path(exists=False))
 @click.argument('output_folder', type=click.Path(exists=False))
-
 def DVH_from_folder_file(path_file, output_folder):
     csv_data: pd.DataFrame = pd.read_csv(path_file)
     for i, r in csv_data.iterrows():
-        logging.info("working on patient: "+r["patientID"])
+        logging.info("working on patient: " + r["patientID"])
         try:
             calculate_dvh_folder(rtStructPath=r["pathRT"], patientID=r["patientID"],
                                  rtDosePath=r["rtDosePath"], rtPlanPath=r["rtPlanPath"],
