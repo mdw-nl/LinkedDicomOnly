@@ -92,6 +92,8 @@ class LinkedDicom:
                         break
                 # TODO this can be done better
                 except Exception as e:
+                    print(e)
+                    logging.warning(e)
                     logging.warning(f"Exception type: {type(e).__name__}")
                     logging.warning(f"Exception message: {str(e)}")
             if list_present_ is not None:

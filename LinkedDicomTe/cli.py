@@ -2,9 +2,10 @@
 
 from LinkedDicomTe import LinkedDicom
 from LinkedDicomTe.rt import dvh
+from LinkedDicomTe.rt.dvh import calculate_dvh_folder
 import os
 import click
-
+import pandas as pd
 from .util import upload_graph_db
 from uuid import uuid4
 import logging
@@ -71,7 +72,6 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
         logging.info("Stored results in " + output_location)
 
 
-
 @click.command()
 @click.argument('output_location', type=click.Path(exists=False))
 @click.option('-fl', '--ldcm_rdf_location', default=None, type=click.Path(exists=True))
@@ -99,7 +99,23 @@ def upload_graph(db_host, repo_db, file):
     upload_graph_db(db_host, repo_db, file, contenttype="application/x-turtle")
 
 
+@click.command()
+@click.argument('Path_rts', type=click.Path(exists=False))
+@click.argument('Path_Rt_dose', type=click.Path(exists=False))
+@click.argument('Path_rt_plan', type=click.Path(exists=False))
+@click.argument('output_folder', type=click.Path(exists=False))
+@click.argument('patient_id', type=str)
+def DVH_from_folder_file(path_file, output_folder):
+    csv_data: pd.DataFrame = pd.read_csv(path_file)
+    for i, r in csv_data.iterrows():
+        try:
+            calculate_dvh_folder(rtStructPath=r["pathRT"], patientID=r["patientID"],
+                                 rtDosePath=r["rtDosePath"], rtPlanPath=r["rtPlanPath"],
+                                 folder_to_store_results=output_folder)
+        except:
+            continue
+
+
 if __name__ == "__main__":
     main_parse()
-
-
+    # DVH_from_folder_file("/Users/alessioromita/PRE_ACT/HypogListStructureconnect.csv", None)
