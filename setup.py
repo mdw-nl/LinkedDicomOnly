@@ -10,7 +10,7 @@ setup(
     description='A package to extract DICOM header data and store this in RDF',
     long_description="A package to extract DICOM header data and store this in RDF",
     install_requires=[
-        "pandas"
+        "pandas",
         "pydicom",
         "rdflib",
         "requests",
