@@ -100,11 +100,9 @@ def upload_graph(db_host, repo_db, file):
 
 
 @click.command()
-@click.argument('Path_rts', type=click.Path(exists=False))
-@click.argument('Path_Rt_dose', type=click.Path(exists=False))
-@click.argument('Path_rt_plan', type=click.Path(exists=False))
+@click.argument('PathFile', type=click.Path(exists=False))
 @click.argument('output_folder', type=click.Path(exists=False))
-@click.argument('patient_id', type=str)
+
 def DVH_from_folder_file(path_file, output_folder):
     csv_data: pd.DataFrame = pd.read_csv(path_file)
     for i, r in csv_data.iterrows():
