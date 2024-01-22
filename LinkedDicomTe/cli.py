@@ -104,11 +104,11 @@ def upload_graph(db_host, repo_db, file):
 @click.argument('output_folder', type=click.Path(exists=False))
 def DVH_from_folder_file(path_file, output_folder):
     csv_data: pd.DataFrame = pd.read_csv(path_file)
-    for i, r in csv_data.iterrows():
-        logging.info("working on patient: " + r["patientID"])
+    for row in csv_data.itertuples():
+        logging.info("working on patient: " + row.patientID)
         try:
-            calculate_dvh_folder(rt_struct_path=r["pathRT"], patient_id=r["patientID"],
-                                 rt_dose_path=r["rtDosePath"], rt_plan_path=r["rtPlanPath"],
+            calculate_dvh_folder(rt_struct_path=row.pathRT, patient_id=row.patientID,
+                                 rt_dose_path=row.rtDosePath, rt_plan_path=row.rtPlanPath,
                                  folder_to_store_results=output_folder)
         except:
             continue
