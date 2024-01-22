@@ -107,8 +107,8 @@ def DVH_from_folder_file(path_file, output_folder):
     for i, r in csv_data.iterrows():
         logging.info("working on patient: " + r["patientID"])
         try:
-            calculate_dvh_folder(rtStructPath=r["pathRT"], patientID=r["patientID"],
-                                 rtDosePath=r["rtDosePath"], rtPlanPath=r["rtPlanPath"],
+            calculate_dvh_folder(rt_struct_path=r["pathRT"], patient_id=r["patientID"],
+                                 rt_dose_path=r["rtDosePath"], rt_plan_path=r["rtPlanPath"],
                                  folder_to_store_results=output_folder)
         except:
             continue

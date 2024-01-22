@@ -12,7 +12,7 @@ import logging
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 
 
-def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
+def get_dvh_for_structures(rt_struct_path, rt_dose_path, rt_plan_path):
     """
             Calculate DVH parameters for all structures available in the RTSTRUCT file.
             Input:
@@ -31,13 +31,13 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
                     - dvh_v: list of volume values on the DVH curve
             """
 
-    if type(rtStructPath) == rdflib.term.URIRef:
-        rtStructPath = str(rtStructPath).replace("file://", "")
+    if type(rt_struct_path) == rdflib.term.URIRef:
+        rt_struct_path = str(rt_struct_path).replace("file://", "")
     # rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
-    structObj = dicomparser.DicomParser(rtStructPath)
+    structObj = dicomparser.DicomParser(rt_struct_path)
 
-    if type(rtDosePath) == rdflib.term.URIRef:
-        rtDosePath = str(rtDosePath).replace("file://", "")
+    if type(rt_dose_path) == rdflib.term.URIRef:
+        rt_dose_path = str(rt_dose_path).replace("file://", "")
     # rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
 
     structures = structObj.GetStructures()
@@ -46,7 +46,7 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
         logging.info("Calculating structures " + str(structures[index]))
         structure = structures[index]
         try:
-            calcdvh = get_dvh_v(rtStructPath, rtDosePath, index, rtPlan)
+            calcdvh = get_dvh_v(rt_struct_path, rt_dose_path, index, rt_plan_path)
         except Exception as exeppp:
             logging.warning("Skipping...")
             continue
@@ -64,6 +64,10 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
             V5value = float(calcdvh.V5.value)
             V10value = float(calcdvh.V10.value)
             V20value = float(calcdvh.V20.value)
+            V30value = float(calcdvh.V30.value)
+            V40value = float(calcdvh.V40.value)
+            V50value = float(calcdvh.V50.value)
+            V60value = float(calcdvh.V60.value)
 
         except Exception as e:
             logging.warning("Value not available exception =")
@@ -71,6 +75,10 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
             V5value = None
             V10value = None
             V20value = None
+            V30value = None
+            V40value = None
+            V50value = None
+            V60value = None
 
         id = "http://data.local/ldcm-rt/" + str(uuid4())
         try:
@@ -90,6 +98,10 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
                 "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
                 "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
                 "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
+                "V30": {"@id": f"{id}/V5", "unit": "Gray", "value": V30value},
+                "V40": {"@id": f"{id}/V10", "unit": "Gray", "value": V40value},
+                "V50": {"@id": f"{id}/V20", "unit": "Gray", "value": V50value},
+                "V60": {"@id": f"{id}/V20", "unit": "Gray", "value": V60value},
                 "color": ','.join(str(e) for e in structure.get("color", np.array([])).tolist()),
 
                 "dvh_curve": {
@@ -104,7 +116,6 @@ def get_dvh_for_structures(rtStructPath, rtDosePath, rtPlan):
             continue
         dvh_list.append(structOut)
     return dvh_list
-
 
 
 def get_dvh_v(structure,
@@ -220,21 +231,25 @@ class DVH_factory(ABC):
         pass
 
 
-
-def calculate_dvh_folder(rtStructPath, rtDosePath, rtPlanPath, patientID, folder_to_store_results):
+def calculate_dvh_folder(rt_struct_path, rt_dose_path, rt_plan_path, patient_id, folder_to_store_results):
     """
 
+    :param rt_struct_path:
+    :param rt_dose_path:
+    :param rt_plan_path:
+    :param patient_id:
     :param folder_to_store_results:
     :return:
     """
 
     try:
-        calculatedDose = get_dvh_for_structures(rtStructPath, rtDosePath,
-                                                  rtPlanPath)
+        calculatedDose = get_dvh_for_structures(rt_struct_path, rt_dose_path,
+                                                rt_plan_path)
     except Exception as ex:
         print(ex)
         logging.warning(ex)
         logging.info("Error skipping")
+        return
 
     logging.info("Calculation Complete ")
     uuid_for_calculation = uuid4()
@@ -314,7 +329,7 @@ def calculate_dvh_folder(rtStructPath, rtDosePath, rtPlanPath, patientID, folder
                 "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_point",
                 "@type": "@id"
             },
-            "4": {
+            "dvh_curve": {
                 "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_curve",
                 "@type": "@id"
             },
@@ -328,7 +343,7 @@ def calculate_dvh_folder(rtStructPath, rtDosePath, rtPlanPath, patientID, folder
         },
         "@type": "CalculationResult",
         "@id": "http://data.local/ldcm-rt/" + str(uuid_for_calculation),
-        "PatientID": patientID,
+        "PatientID": patient_id,
         "doseFraction": 0,
         "references": ["", ""],
         "software": {
@@ -413,7 +428,7 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
             try:
 
                 calculatedDose = get_dvh_for_structures(dosePackage.rtStructPath, dosePackage.rtDosePath,
-                                                          dosePackage.rtPlanPath)
+                                                        dosePackage.rtPlanPath)
             except Exception as ex:
                 print(ex)
                 logging.warning(ex)
@@ -493,11 +508,27 @@ SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanP
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V20",
                         "@type": "@id"
                     },
+                    "V30": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V30",
+                        "@type": "@id"
+                    },
+                    "V40": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V40",
+                        "@type": "@id"
+                    },
+                    "V50": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V50",
+                        "@type": "@id"
+                    },
+                    "V60": {
+                        "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/V60",
+                        "@type": "@id"
+                    },
                     "dvh_points": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_point",
                         "@type": "@id"
                     },
-                    "4": {
+                    "dvh_curve": {
                         "@id": "https://johanvansoest.nl/ontologies/LinkedDicom-dvh/dvh_curve",
                         "@type": "@id"
                     },
