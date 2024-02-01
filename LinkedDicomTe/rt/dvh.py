@@ -10,14 +10,16 @@ import os
 import numpy as np
 import logging
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
+import pydicom
+from dicompylercore import dose
 
 
-def get_dvh_for_structures(rt_struct_path, rt_dose_path, rt_plan_path):
+def get_dvh_for_structures(rt_struct_path, rt_dose_data, rt_plan_path=None):
     """
             Calculate DVH parameters for all structures available in the RTSTRUCT file.
             Input:
                 - rtStructPath: an URIRef or string containing the file path of the RTSTRUCT file
-                - rtDosePath: an URIRef or string containing the file path of the RTDOSE file
+                - rtDosePath: an URIRef or string containing the file path of the RTDOSE file or the rt-dose it self
                 - rtPlan
             Output:
                 - A python list containing a dictionaries with the following items:
@@ -30,30 +32,32 @@ def get_dvh_for_structures(rt_struct_path, rt_dose_path, rt_plan_path):
                     - dvh_d: list of dose values on the DVH curve
                     - dvh_v: list of volume values on the DVH curve
             """
+    dvh_list = []  # result dvh
 
     if type(rt_struct_path) == rdflib.term.URIRef:
         rt_struct_path = str(rt_struct_path).replace("file://", "")
-    # rtStructPath = rtStructPath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
     structObj = dicomparser.DicomParser(rt_struct_path)
 
-    if type(rt_dose_path) == rdflib.term.URIRef:
-        rt_dose_path = str(rt_dose_path).replace("file://", "")
-    # rtDosePath = rtDosePath.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
+    # RT-plan can be empty
 
+    if type(rt_dose_data) == rdflib.term.URIRef:
+        rt_dose_data = str(rt_dose_data).replace("file://", "")
     structures = structObj.GetStructures()
-    dvh_list = []
+
     for index in structures:
         logging.info("Calculating structures " + str(structures[index]))
         structure = structures[index]
         try:
-            calcdvh = get_dvh_v(rt_struct_path, rt_dose_path, index, rt_plan_path)
-        except Exception as exeppp:
+            calc_dvh = get_dvh_v(rt_struct_path, rt_dose_data, index, rt_plan_path)
+        except Exception as except_t:
+            logging.warning(except_t)
             logging.warning("Skipping...")
             continue
-        dvh_d = calcdvh.bincenters.tolist()
 
-        dvh_v = calcdvh.counts.tolist()
+        dvh_d = calc_dvh.bincenters.tolist()
+        dvh_v = calc_dvh.counts.tolist()
         dvh_points = []
+
         for i in range(0, len(dvh_d)):
             dvh_points.append({
                 "d_point": dvh_d[i],
@@ -61,13 +65,13 @@ def get_dvh_for_structures(rt_struct_path, rt_dose_path, rt_plan_path):
             })
 
         try:
-            V5value = float(calcdvh.V5.value)
-            V10value = float(calcdvh.V10.value)
-            V20value = float(calcdvh.V20.value)
-            V30value = float(calcdvh.V30.value)
-            V40value = float(calcdvh.V40.value)
-            V50value = float(calcdvh.V50.value)
-            V60value = float(calcdvh.V60.value)
+            V5value = float(calc_dvh.V5.value)
+            V10value = float(calc_dvh.V10.value)
+            V20value = float(calc_dvh.V20.value)
+            V30value = float(calc_dvh.V30.value)
+            V40value = float(calc_dvh.V40.value)
+            V50value = float(calc_dvh.V50.value)
+            V60value = float(calc_dvh.V60.value)
 
         except Exception as e:
             logging.warning("Value not available exception =")
@@ -80,48 +84,48 @@ def get_dvh_for_structures(rt_struct_path, rt_dose_path, rt_plan_path):
             V50value = None
             V60value = None
 
-        id = "http://data.local/ldcm-rt/" + str(uuid4())
+        id_data = "http://data.local/ldcm-rt/" + str(uuid4())
         try:
             structOut = {
-                "@id": id,
+                "@id": id_data,
                 "structureName": structure["name"],
-                "min": {"@id": f"{id}/min", "unit": "Gray", "value": calcdvh.min},
-                "mean": {"@id": f"{id}/mean", "unit": "Gray", "value": calcdvh.mean},
-                "max": {"@id": f"{id}/max", "unit": "Gray", "value": calcdvh.max},
-                "volume": {"@id": f"{id}/volume", "unit": "cc", "value": int(calcdvh.volume)},
-                "D10": {"@id": f"{id}/D10", "unit": "Gray", "value": float(calcdvh.D10.value)},
-                "D20": {"@id": f"{id}/D20", "unit": "Gray", "value": float(calcdvh.D20.value)},
-                "D30": {"@id": f"{id}/D30", "unit": "Gray", "value": float(calcdvh.D30.value)},
-                "D40": {"@id": f"{id}/D40", "unit": "Gray", "value": float(calcdvh.D40.value)},
-                "D50": {"@id": f"{id}/D50", "unit": "Gray", "value": float(calcdvh.D50.value)},
-                "D60": {"@id": f"{id}/D60", "unit": "Gray", "value": float(calcdvh.D60.value)},
-                "V5": {"@id": f"{id}/V5", "unit": "Gray", "value": V5value},
-                "V10": {"@id": f"{id}/V10", "unit": "Gray", "value": V10value},
-                "V20": {"@id": f"{id}/V20", "unit": "Gray", "value": V20value},
-                "V30": {"@id": f"{id}/V5", "unit": "Gray", "value": V30value},
-                "V40": {"@id": f"{id}/V10", "unit": "Gray", "value": V40value},
-                "V50": {"@id": f"{id}/V20", "unit": "Gray", "value": V50value},
-                "V60": {"@id": f"{id}/V20", "unit": "Gray", "value": V60value},
+                "min": {"@id": f"{id_data}/min", "unit": "Gray", "value": calc_dvh.min},
+                "mean": {"@id": f"{id_data}/mean", "unit": "Gray", "value": calc_dvh.mean},
+                "max": {"@id": f"{id_data}/max", "unit": "Gray", "value": calc_dvh.max},
+                "volume": {"@id": f"{id_data}/volume", "unit": "cc", "value": int(calc_dvh.volume)},
+                "D10": {"@id": f"{id_data}/D10", "unit": "Gray", "value": float(calc_dvh.D10.value)},
+                "D20": {"@id": f"{id_data}/D20", "unit": "Gray", "value": float(calc_dvh.D20.value)},
+                "D30": {"@id": f"{id_data}/D30", "unit": "Gray", "value": float(calc_dvh.D30.value)},
+                "D40": {"@id": f"{id_data}/D40", "unit": "Gray", "value": float(calc_dvh.D40.value)},
+                "D50": {"@id": f"{id_data}/D50", "unit": "Gray", "value": float(calc_dvh.D50.value)},
+                "D60": {"@id": f"{id_data}/D60", "unit": "Gray", "value": float(calc_dvh.D60.value)},
+                "V5": {"@id": f"{id_data}/V5", "unit": "Gray", "value": V5value},
+                "V10": {"@id": f"{id_data}/V10", "unit": "Gray", "value": V10value},
+                "V20": {"@id": f"{id_data}/V20", "unit": "Gray", "value": V20value},
+                "V30": {"@id": f"{id_data}/V5", "unit": "Gray", "value": V30value},
+                "V40": {"@id": f"{id_data}/V10", "unit": "Gray", "value": V40value},
+                "V50": {"@id": f"{id_data}/V20", "unit": "Gray", "value": V50value},
+                "V60": {"@id": f"{id_data}/V20", "unit": "Gray", "value": V60value},
                 "color": ','.join(str(e) for e in structure.get("color", np.array([])).tolist()),
 
                 "dvh_curve": {
-                    "@id": f"{id}/dvh_curve",
+                    "@id": f"{id_data}/dvh_curve",
                     "dvh_points": dvh_points
                 }
             }
         except Exception as e:
-            print(e)
             logging.info("error")
             logging.warning(e)
             continue
+
         dvh_list.append(structOut)
     return dvh_list
 
 
 def get_dvh_v(structure,
-              dose,
+              dose_data,
               roi,
-              rtplan,
+              rt_plan_p=None,
               limit=None,
               calculate_full_volume=True,
               use_structure_extents=False,
@@ -137,12 +141,12 @@ def get_dvh_v(structure,
     ----------
     structure : pydicom Dataset or filename
         DICOM RT Structure Set used to determine the structure data.
-    dose : pydicom Dataset or filename
+    dose_data : pydicom Dataset or filename
         DICOM RT Dose used to determine the dose grid.
     roi : int
         The ROI number used to uniquely identify the structure in the structure
         set.
-    rtplan : pydicom Dataset or filename
+    rt_plan_p : pydicom Dataset or filename
         DICOM RT plan path
 
     limit : int, optional
@@ -173,47 +177,65 @@ def get_dvh_v(structure,
     """
 
     # rtplan = rtplan.replace("/data/pre-act/mnt/", "/Volumes/research/Projects/cds/p0630-pre-act-dm/")
-    rtss = dicomparser.DicomParser(structure)
-    rtdose = dicomparser.DicomParser(dose, memmap_pixel_array=memmap_rtdose)
-    structures = rtss.GetStructures()
+    rt_str = dicomparser.DicomParser(structure)
+    if type(dose_data) is str:
+        rt_dose = dicomparser.DicomParser(dose_data, memmap_pixel_array=memmap_rtdose)
+    else:
+        rt_dose = dose_data
+    structures = rt_str.GetStructures()
     s = structures[roi]
-    s['planes'] = rtss.GetStructureCoordinates(roi)
-    s['thickness'] = thickness if thickness else rtss.CalculatePlaneThickness(
+    s['planes'] = rt_str.GetStructureCoordinates(roi)
+    s['thickness'] = thickness if thickness else rt_str.CalculatePlaneThickness(
         s['planes'])
-    rt_plan = dicomparser.DicomParser(rtplan)
 
-    plan = rt_plan.GetPlan()
-
-    calcdvh = dicompylercore.dvhcalc._calculate_dvh(s, rtdose, limit, calculate_full_volume,
+    calc_dvh = dvhcalc._calculate_dvh(s, rt_dose, limit, calculate_full_volume,
                                                     use_structure_extents, interpolation_resolution,
                                                     interpolation_segments_between_planes,
                                                     callback)
-    if plan['rxdose'] is not None:
+    if rt_plan_p is not None:
+        rt_plan = dicomparser.DicomParser(rt_plan_p)
 
-        return dvh.DVH(counts=calcdvh.histogram,
-                       bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
-                             np.arange(0, calcdvh.histogram.size + 1) / 100),
-                       dvh_type='differential',
-                       dose_units='Gy',
-                       notes=calcdvh.notes,
-                       name=s['name'],
-                       rx_dose=plan['rxdose'] / 100).cumulative
+        plan = rt_plan.GetPlan()
+        if plan['rxdose'] is not None:
+
+            return dvh.DVH(counts=calc_dvh.histogram,
+                           bins=(np.arange(0, 2) if (calc_dvh.histogram.size == 1) else
+                                 np.arange(0, calc_dvh.histogram.size + 1) / 100),
+                           dvh_type='differential',
+                           dose_units='Gy',
+                           notes=calc_dvh.notes,
+                           name=s['name'],
+                           rx_dose=plan['rxdose'] / 100).cumulative
+        else:
+            return dvh.DVH(counts=calc_dvh.histogram,
+                           bins=(np.arange(0, 2) if (calc_dvh.histogram.size == 1) else
+                                 np.arange(0, calc_dvh.histogram.size + 1) / 100),
+                           dvh_type='differential',
+                           dose_units='Gy',
+                           notes=calc_dvh.notes,
+                           name=s['name']).cumulative
     else:
-        return dvh.DVH(counts=calcdvh.histogram,
-                       bins=(np.arange(0, 2) if (calcdvh.histogram.size == 1) else
-                             np.arange(0, calcdvh.histogram.size + 1) / 100),
+        return dvh.DVH(counts=calc_dvh.histogram,
+                       bins=(np.arange(0, 2) if (calc_dvh.histogram.size == 1) else
+                             np.arange(0, calc_dvh.histogram.size + 1) / 100),
                        dvh_type='differential',
                        dose_units='Gy',
-                       notes=calcdvh.notes,
+                       notes=calc_dvh.notes,
                        name=s['name']).cumulative
 
 
 class DVH_factory(ABC):
-    def __init__(self, file_path, urls=None):
+    """
+    Starting point for the dvh calculation.
+    Base on the arguments that you provide you will query the data from a ttl file or from Graph service.
+    Tested only on GraphDB
+    """
+    def __init__(self, file_path, query, urls=None,):
         """
         :param file_path:
         :param urls:
         """
+        self.query = query
         if file_path is not None:
             self.__ldcm_graph = RDFService.GraphService(file_path)
         else:
@@ -231,7 +253,74 @@ class DVH_factory(ABC):
         pass
 
 
-def calculate_dvh_folder(rt_struct_path, rt_dose_path, rt_plan_path, patient_id, folder_to_store_results):
+def check_dose_summ(dose_path):
+    """
+    :param dose_path:
+    :return:
+    """
+    dose_to_sum = []
+    for e in dose_path:
+        data = pydicom.dcmread(e)
+        dose_summ = data.DoseSummationType
+        if dose_summ == "BEAM":
+            dose_to_sum.append(e)
+    return dose_to_sum
+
+
+def dose_summation(dose_file0, dose_file1):
+    """
+
+    :param dose_file0:
+    :param dose_file1:
+    :return:
+    """
+    if type(dose_file0) is not dicompylercore.dose.DoseGrid:
+        grid_1 = dose.DoseGrid(dose_file0)
+    else:
+        grid_1 = dose_file0
+    grid_2 = dose.DoseGrid(dose_file1)
+    grid_sum = grid_1 + grid_2
+    return grid_sum
+
+
+def dose_summation_process(dose_to_sum_list):
+    """
+
+    :param dose_to_sum_list: list of string path to the
+    :return:
+    """
+
+    result_dose = dose_to_sum_list[0]
+    data = pydicom.read_file(result_dose)
+
+    dose_summ = data.DoseSummationType
+    print(dose_summ)
+    print(data[0x3004, 0x000E].value)
+    print(data[0x0020, 0x0032])
+    print(data[0x0020, 0x0037])
+    print(data[0x0020, 0x000D])
+    print(data[0x0028, 0x0030])
+    print(data[0x3004, 0x000E])
+    print(data[0x3004, 0x000C])
+    for i in range(1, len(dose_to_sum_list)):
+        data = pydicom.read_file(dose_to_sum_list[i])
+
+        dose_summ = data.DoseSummationType
+        print(dose_summ)
+        print(data[0x3004, 0x000E].value)
+        print(data[0x0020, 0x0032])
+        print(data[0x0020, 0x0037])
+        print(data[0x0020, 0x000D])
+        print(data[0x0028, 0x0030])
+        print(data[0x3004, 0x000E])
+        print(data[0x3004, 0x000C])
+        print('fin')
+
+        result_dose = dose_summation(result_dose, dose_to_sum_list[i])
+    return result_dose
+
+
+def calculate_dvh_folder(rt_struct_path, *rt_dose_path, rt_plan_path=None, patient_id, folder_to_store_results):
     """
 
     :param rt_struct_path:
@@ -241,15 +330,22 @@ def calculate_dvh_folder(rt_struct_path, rt_dose_path, rt_plan_path, patient_id,
     :param folder_to_store_results:
     :return:
     """
+    if type(rt_dose_path) is not tuple or len(rt_dose_path)==1:
 
-    try:
-        calculatedDose = get_dvh_for_structures(rt_struct_path, rt_dose_path,
+        try:
+            calculatedDose = get_dvh_for_structures(rt_struct_path, rt_dose_path,
+                                                    rt_plan_path)
+        except Exception as ex:
+            print(ex)
+            logging.warning(ex)
+            logging.info("Error skipping")
+            return
+    else:
+        list_to_sum = check_dose_summ(rt_dose_path)
+        grid_sum = dose_summation_process(list_to_sum)
+        calculatedDose = get_dvh_for_structures(rt_struct_path, grid_sum,
                                                 rt_plan_path)
-    except Exception as ex:
-        print(ex)
-        logging.warning(ex)
-        logging.info("Error skipping")
-        return
+
 
     logging.info("Calculation Complete ")
     uuid_for_calculation = uuid4()
@@ -363,6 +459,7 @@ def calculate_dvh_folder(rt_struct_path, rt_dose_path, rt_plan_path, patient_id,
 
 class DVH_dicompyler(DVH_factory):
 
+
     def __find_complete_packages(self):
         """
         :return:
@@ -372,35 +469,8 @@ class DVH_dicompyler(DVH_factory):
         :return:
         """
         logging.info("Execution Query...")
-        query = """
-            PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
-SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanPath ?fgn
-                WHERE {
-    				?data ldcm:has_study ?dcmStudy.
-    				?data ldcm:T00100010 ?patientID.
-                    ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
-                    
-                    ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
-    				?rtPlan schema:contentUrl ?rtPlanPath.
-                    ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
-                    
-                    ?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
-                    ?dcmSerieRtStruct ldcm:has_image ?rtStruct.
-                    ?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
-                    ?rtStruct schema:contentUrl ?rtStructPath.
-                    
-                    ?dcmStudy ldcm:has_series ?dcmSerieRtDose.
-                    ?dcmSerieRtDose ldcm:has_image ?rtDose.
-                    ?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
-                    ?rtDose schema:contentUrl ?rtDosePath.
-    				?rtPlan ldcm:T300A0070 ?fg.
-					?fg ldcm:has_sequence_item ?fgg.
-					?fgg ldcm:T300A0078 ?fgn.
-					
-                }
-                
-                
-                """
+        query = self.query
+
         ldcm = self.get_ldcm_graph()
         dose_objects = ldcm.runSparqlQuery(query)
         return dose_objects

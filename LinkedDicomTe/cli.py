@@ -2,11 +2,11 @@
 
 from LinkedDicomTe import LinkedDicom
 from LinkedDicomTe.rt import dvh
-from LinkedDicomTe.rt.dvh import calculate_dvh_folder
+from LinkedDicomTe.rt.dvh import calculate_dvh_folder, dose_summation_process
 import os
 import click
 import pandas as pd
-from .util import upload_graph_db
+from util import upload_graph_db
 from uuid import uuid4
 import logging
 
@@ -15,7 +15,35 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-
+query_example= """
+            PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
+SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanPath ?fgn
+                WHERE {
+    				?data ldcm:has_study ?dcmStudy.
+    				?data ldcm:T00100010 ?patientID.
+                    ?rtPlan rdf:type ldcm:Radiotherapy_Plan_Object.
+                    
+                    ?dcmSerieRtPlan ldcm:has_image ?rtPlan.
+    				?rtPlan schema:contentUrl ?rtPlanPath.
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtPlan.
+                    
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtStruct.
+                    ?dcmSerieRtStruct ldcm:has_image ?rtStruct.
+                    ?rtStruct rdf:type ldcm:Radiotherapy_Structure_Object.
+                    ?rtStruct schema:contentUrl ?rtStructPath.
+                    
+                    ?dcmStudy ldcm:has_series ?dcmSerieRtDose.
+                    ?dcmSerieRtDose ldcm:has_image ?rtDose.
+                    ?rtDose rdf:type ldcm:Radiotherapy_Dose_Object.
+                    ?rtDose schema:contentUrl ?rtDosePath.
+    				?rtPlan ldcm:T300A0070 ?fg.
+					?fg ldcm:has_sequence_item ?fgg.
+					?fgg ldcm:T300A0078 ?fgn.
+					
+                }
+                
+                
+                """
 @click.command()
 @click.argument('dicom-input-folder', type=click.Path(exists=True))
 @click.option('-o', '--ontology-file', help='Location of ontology file to use for override.')
@@ -74,18 +102,19 @@ def main_parse_test(dicom_input_folder, ontology_file, file_persistent,
 
 @click.command()
 @click.argument('output_location', type=click.Path(exists=False))
+@click.argument('query', type=str)
 @click.option('-fl', '--ldcm_rdf_location', default=None, type=click.Path(exists=True))
 @click.option('-ep', '--db_endpoint', default=None, type=str)
-def calc_dvh(output_location, ldcm_rdf_location=None, db_endpoint=None):
+def calc_dvh(output_location, query=query_example, ldcm_rdf_location=None, db_endpoint=None):
     logging.info('Starting DVH Extraction')
-    logging.info(str(ldcm_rdf_location))
-    logging.info(str(output_location))
+    logging.info("File location: ", str(ldcm_rdf_location))
+    logging.info("The output is saved in: ",str(output_location))
     if db_endpoint is not None and ldcm_rdf_location is None:
-        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location, urls=db_endpoint)
+        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location, urls=db_endpoint, query=query)
         dvh_factory.calculate_dvh(output_location)
 
     elif db_endpoint is None and ldcm_rdf_location is not None:
-        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location)
+        dvh_factory = dvh.DVH_dicompyler(ldcm_rdf_location, query=query)
         dvh_factory.calculate_dvh(output_location)
     else:
         raise Exception("Missing ttl file location or graphdb address")
@@ -107,13 +136,13 @@ def DVH_from_folder_file(path_file, output_folder):
     for row in csv_data.itertuples():
         logging.info("working on patient: " + row.patientID)
         try:
-            calculate_dvh_folder(rt_struct_path=row.pathRT, patient_id=row.patientID,
-                                 rt_dose_path=row.rtDosePath, rt_plan_path=row.rtPlanPath,
+            calculate_dvh_folder(row.pathRT,row.rtDosePath, patient_id=row.patientID,
+                                 rt_plan_path=row.rtPlanPath,
                                  folder_to_store_results=output_folder)
+        # TODO identify exception to catch
         except:
             continue
 
 
 if __name__ == "__main__":
     main_parse()
-    # DVH_from_folder_file("/Users/alessioromita/PRE_ACT/HypogListStructureconnect.csv", None)
