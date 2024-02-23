@@ -17,7 +17,8 @@ setup(
         "click",
         "pynetdicom",
         "requests",
-        "dicompyler-core"
+        "dicompyler-core",
+        "pathlib"
     ],
     entry_points = {
         'console_scripts': [
