@@ -16,14 +16,14 @@ from dicompylercore import dose
 
 def get_dvh_for_structures(rt_struct_path, rt_dose_data, rt_plan_path=None):
     """
-            Calculate DVH parameters for all structures available in the RTSTRUCT file.
+            Calculate DVH parameters for all structures available in the RT-STRUCT file.
             Input:
-                - rtStructPath: an URIRef or string containing the file path of the RTSTRUCT file
-                - rtDosePath: an URIRef or string containing the file path of the RTDOSE file or the rt-dose it self
+                - rtStructPath: an URIRef or string containing the file path of the RT-STRUCT file
+                - rtDosePath: an URIRef or string containing the file path of the RT-DOSE file or the rt-dose itself
                 - rtPlan
             Output:
                 - A python list containing a dictionaries with the following items:
-                    - structureName: name of the structure as given in the RTSTRUCT file
+                    - structureName: name of the structure as given in the RT-STRUCT file
                     - min: minimum dose to the structure
                     - mean: mean dose for this structure
                     - max: maximum dose for this structure
@@ -65,6 +65,14 @@ def get_dvh_for_structures(rt_struct_path, rt_dose_data, rt_plan_path=None):
             })
 
         try:
+            print(calc_dvh.V5)
+            print(calc_dvh.D98)
+            print(calc_dvh.V107)
+            print(calc_dvh.V10)
+            print(calc_dvh.D10)
+            print(calc_dvh.volume,calc_dvh.volume_units)
+
+
             V5value = float(calc_dvh.V5.value)
             V10value = float(calc_dvh.V10.value)
             V20value = float(calc_dvh.V20.value)
@@ -152,7 +160,7 @@ def get_dvh_v(structure,
     limit : int, optional
         Dose limit in cGy as a maximum bin for the histogram.
     calculate_full_volume : bool, optional
-        Calculate the full structure volume including contours outside of the
+        Calculate the full structure volume including contours outside the
         dose grid.
     use_structure_extents : bool, optional
         Limit the DVH calculation to the in-plane structure boundaries.

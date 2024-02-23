@@ -6,7 +6,7 @@ from LinkedDicomTe.rt.dvh import calculate_dvh_folder, dose_summation_process
 import os
 import click
 import pandas as pd
-from util import upload_graph_db
+from .util import upload_graph_db
 from uuid import uuid4
 import logging
 
@@ -15,7 +15,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-query_example= """
+query_example = """
             PREFIX ldcm: <https://johanvansoest.nl/ontologies/LinkedDicom/>
 SELECT  distinct ?patientID ?rtDose ?rtStruct ?rtDosePath ?rtStructPath ?rtPlanPath ?fgn
                 WHERE {
