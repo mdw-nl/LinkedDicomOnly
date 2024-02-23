@@ -20,6 +20,7 @@ setup(
         "dicompyler-core",
         "pathlib"
     ],
+    #
     entry_points = {
         'console_scripts': [
             'ldcm-parse = LinkedDicomTe.cli:main_parse',
