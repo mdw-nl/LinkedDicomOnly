@@ -17,10 +17,8 @@ setup(
         "click",
         "pynetdicom",
         "requests",
-        "dicompyler-core",
-        "pathlib"
+        "dicompyler-core"
     ],
-
     entry_points = {
         'console_scripts': [
             'ldcm-parse = LinkedDicomTe.cli:main_parse',

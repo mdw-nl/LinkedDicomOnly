@@ -70,8 +70,7 @@ def get_dvh_for_structures(rt_struct_path, rt_dose_data, rt_plan_path=None):
             print(calc_dvh.V107)
             print(calc_dvh.V10)
             print(calc_dvh.D10)
-            print(calc_dvh.volume,calc_dvh.volume_units)
-
+            print(calc_dvh.volume, calc_dvh.volume_units)
 
             V5value = float(calc_dvh.V5.value)
             V10value = float(calc_dvh.V10.value)
@@ -197,9 +196,9 @@ def get_dvh_v(structure,
         s['planes'])
 
     calc_dvh = dvhcalc._calculate_dvh(s, rt_dose, limit, calculate_full_volume,
-                                                    use_structure_extents, interpolation_resolution,
-                                                    interpolation_segments_between_planes,
-                                                    callback)
+                                      use_structure_extents, interpolation_resolution,
+                                      interpolation_segments_between_planes,
+                                      callback)
     if rt_plan_p is not None:
         rt_plan = dicomparser.DicomParser(rt_plan_p)
 
@@ -238,7 +237,8 @@ class DVH_factory(ABC):
     Base on the arguments that you provide you will query the data from a ttl file or from Graph service.
     Tested only on GraphDB
     """
-    def __init__(self, file_path, query, urls=None,):
+
+    def __init__(self, file_path, query, urls=None, ):
         """
         :param file_path:
         :param urls:
@@ -331,6 +331,7 @@ def dose_summation_process(dose_to_sum_list):
 def calculate_dvh_folder(rt_struct_path, *rt_dose_path, rt_plan_path=None, patient_id, folder_to_store_results):
     """
 
+
     :param rt_struct_path:
     :param rt_dose_path:
     :param rt_plan_path:
@@ -338,7 +339,7 @@ def calculate_dvh_folder(rt_struct_path, *rt_dose_path, rt_plan_path=None, patie
     :param folder_to_store_results:
     :return:
     """
-    if type(rt_dose_path) is not tuple or len(rt_dose_path)==1:
+    if type(rt_dose_path) is not tuple or len(rt_dose_path) == 1:
 
         try:
             calculatedDose = get_dvh_for_structures(rt_struct_path, rt_dose_path,
@@ -353,7 +354,6 @@ def calculate_dvh_folder(rt_struct_path, *rt_dose_path, rt_plan_path=None, patie
         grid_sum = dose_summation_process(list_to_sum)
         calculatedDose = get_dvh_for_structures(rt_struct_path, grid_sum,
                                                 rt_plan_path)
-
 
     logging.info("Calculation Complete ")
     uuid_for_calculation = uuid4()
@@ -466,7 +466,6 @@ def calculate_dvh_folder(rt_struct_path, *rt_dose_path, rt_plan_path=None, patie
 
 
 class DVH_dicompyler(DVH_factory):
-
 
     def __find_complete_packages(self):
         """
